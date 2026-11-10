@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Login to Docker Hub
@@ -20,61 +20,61 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
+      - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Build and Push Auth Service
         uses: docker/build-push-action@v6
         with:
-          context: ./auth-service
+          context: ./E-Commerce_Project/auth-service
           push: true
           tags: omarnoureldeen/auth-service:latest
 
       - name: Build and Push Cart Service
         uses: docker/build-push-action@v6
         with:
-          context: ./cart-service
+          context: ./E-Commerce_Project/cart-service
           push: true
           tags: omarnoureldeen/cart-service:latest
 
       - name: Build and Push Eureka Server
         uses: docker/build-push-action@v6
         with:
-          context: ./eureka-server
+          context: ./E-Commerce_Project/eureka-server
           push: true
           tags: omarnoureldeen/eureka-server:latest
 
       - name: Build and Push Gateway
         uses: docker/build-push-action@v6
         with:
-          context: ./gateway
+          context: ./E-Commerce_Project/gateway
           push: true
           tags: omarnoureldeen/gateway:latest
 
       - name: Build and Push Order Service
         uses: docker/build-push-action@v6
         with:
-          context: ./order-service
+          context: ./E-Commerce_Project/order-service
           push: true
           tags: omarnoureldeen/order-service:latest
 
       - name: Build and Push Product Service
         uses: docker/build-push-action@v6
         with:
-          context: ./product-service
+          context: ./E-Commerce_Project/product-service
           push: true
           tags: omarnoureldeen/product-service:latest
 
       - name: Build and Push User Service
         uses: docker/build-push-action@v6
         with:
-          context: ./user-services
+          context: ./E-Commerce_Project/user-services
           push: true
           tags: omarnoureldeen/user-services:latest
 
       - name: Build and Push Frontend
         uses: docker/build-push-action@v6
         with:
-          context: ./frontend
+          context: ./E-Commerce_Project/frontend
           push: true
           tags: omarnoureldeen/jeans-frontend:latest
