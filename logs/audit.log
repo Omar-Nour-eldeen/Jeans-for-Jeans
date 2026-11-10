@@ -1,0 +1,56 @@
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : OrderServiceimpl
+METHOD        : getMyOrders
+EXECUTED_AT   : 2026-05-09 13:44:50
+EXECUTION_MS  : 770 ms
+ARGUMENTS     : [5, 0, 10]
+==================================================
+
+==================================================
+STATUS        : FAILED
+CLASS         : CartServiceImpl
+METHOD        : addItem
+EXECUTED_AT   : 2026-05-09 13:50:55
+EXECUTION_MS  : 267 ms
+EXCEPTION     : ServiceUnavailableException
+MESSAGE       : Product Service is currently unavailable. Please try again.
+==================================================
+
+==================================================
+STATUS        : FAILED
+CLASS         : CartServiceImpl
+METHOD        : addItem
+EXECUTED_AT   : 2026-05-09 13:56:12
+EXECUTION_MS  : 579 ms
+EXCEPTION     : ResourceNotFoundException
+MESSAGE       : Variant not found: 2 for product: 1
+==================================================
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : CartServiceImpl
+METHOD        : addItem
+EXECUTED_AT   : 2026-05-09 14:05:01
+EXECUTION_MS  : 112 ms
+ARGUMENTS     : [2, AddCartItemRequest(productId=1, variantId=2, quantity=2)]
+==================================================
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : CartServiceImpl
+METHOD        : getCart
+EXECUTED_AT   : 2026-05-09 14:07:44
+EXECUTION_MS  : 12 ms
+ARGUMENTS     : [2]
+==================================================
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : OrderServiceimpl
+METHOD        : placeOrder
+EXECUTED_AT   : 2026-05-09 14:11:59
+EXECUTION_MS  : 181 ms
+ARGUMENTS     : [2, PlaceOrderRequest(shippingAddress=ShippingAddressRequest(recipientName=Ahmed Mahmoud, phone=0123456789, street=35st, city=Giza, country=Egypt, zipCode=1234), paymentMethod=CREDIT_CARD, notes=null)]
+==================================================

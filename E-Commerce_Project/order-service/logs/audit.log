@@ -1,0 +1,171 @@
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : OrderServiceimpl
+METHOD        : getReservedStockMap
+EXECUTED_AT   : 2026-10-19 16:23:28
+EXECUTION_MS  : 2 ms
+ARGUMENTS     : [null]
+==================================================
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : OrderServiceimpl
+METHOD        : getStats
+EXECUTED_AT   : 2026-10-19 16:23:30
+EXECUTION_MS  : 614 ms
+ARGUMENTS     : []
+==================================================
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : OrderServiceimpl
+METHOD        : getReservedStockMap
+EXECUTED_AT   : 2026-10-19 16:23:40
+EXECUTION_MS  : 0 ms
+ARGUMENTS     : [null]
+==================================================
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : OrderServiceimpl
+METHOD        : getReservedStockMap
+EXECUTED_AT   : 2026-10-19 16:23:40
+EXECUTION_MS  : 0 ms
+ARGUMENTS     : [null]
+==================================================
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : OrderServiceimpl
+METHOD        : getReservedStockMap
+EXECUTED_AT   : 2026-10-19 16:23:42
+EXECUTION_MS  : 1 ms
+ARGUMENTS     : [null]
+==================================================
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : OrderServiceimpl
+METHOD        : getReservedStockMap
+EXECUTED_AT   : 2026-10-19 16:23:43
+EXECUTION_MS  : 0 ms
+ARGUMENTS     : [null]
+==================================================
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : OrderServiceimpl
+METHOD        : getAllOrders
+EXECUTED_AT   : 2026-10-19 16:23:44
+EXECUTION_MS  : 573 ms
+ARGUMENTS     : [null, 0, 20]
+==================================================
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : OrderServiceimpl
+METHOD        : getReservedStockMap
+EXECUTED_AT   : 2026-10-19 16:23:46
+EXECUTION_MS  : 0 ms
+ARGUMENTS     : [null]
+==================================================
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : OrderServiceimpl
+METHOD        : getReservedStockMap
+EXECUTED_AT   : 2026-10-19 16:23:46
+EXECUTION_MS  : 0 ms
+ARGUMENTS     : [null]
+==================================================
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : OrderServiceimpl
+METHOD        : getReservedStockMap
+EXECUTED_AT   : 2026-10-19 16:23:59
+EXECUTION_MS  : 0 ms
+ARGUMENTS     : [null]
+==================================================
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : OrderServiceimpl
+METHOD        : getReservedStockMap
+EXECUTED_AT   : 2026-10-19 16:24:00
+EXECUTION_MS  : 0 ms
+ARGUMENTS     : [null]
+==================================================
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : OrderServiceimpl
+METHOD        : getReservedStockMap
+EXECUTED_AT   : 2026-10-19 16:24:00
+EXECUTION_MS  : 0 ms
+ARGUMENTS     : [null]
+==================================================
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : OrderServiceimpl
+METHOD        : getReservedStockMap
+EXECUTED_AT   : 2026-10-19 16:24:03
+EXECUTION_MS  : 1 ms
+ARGUMENTS     : [null]
+==================================================
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : OrderServiceimpl
+METHOD        : getReservedStockMap
+EXECUTED_AT   : 2026-10-19 16:27:01
+EXECUTION_MS  : 1 ms
+ARGUMENTS     : [null]
+==================================================
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : OrderServiceimpl
+METHOD        : getReservedStockMap
+EXECUTED_AT   : 2026-10-19 16:27:01
+EXECUTION_MS  : 1 ms
+ARGUMENTS     : [null]
+==================================================
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : OrderServiceimpl
+METHOD        : getStats
+EXECUTED_AT   : 2026-10-19 16:27:01
+EXECUTION_MS  : 9 ms
+ARGUMENTS     : []
+==================================================
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : OrderServiceimpl
+METHOD        : getReservedStockMap
+EXECUTED_AT   : 2026-10-19 16:27:08
+EXECUTION_MS  : 0 ms
+ARGUMENTS     : [null]
+==================================================
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : OrderServiceimpl
+METHOD        : getReservedStockMap
+EXECUTED_AT   : 2026-10-19 16:27:08
+EXECUTION_MS  : 0 ms
+ARGUMENTS     : [null]
+==================================================
+
+==================================================
+STATUS        : SUCCESS
+CLASS         : OrderServiceimpl
+METHOD        : getStats
+EXECUTED_AT   : 2026-10-19 16:27:08
+EXECUTION_MS  : 21 ms
+ARGUMENTS     : []
+==================================================
