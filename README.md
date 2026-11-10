@@ -1,6 +1,6 @@
 # 🛍️ Jeans For Jeans — Enterprise E-Commerce Microservices Platform
 
-An enterprise-grade, event-driven e-commerce platform built with a **Distributed Microservices Architecture** using **Spring Boot 3**, **Spring Cloud**, **MySQL**, **RabbitMQ**, and a modern **React (Vite) + Tailwind CSS** frontend.
+An enterprise-grade, event-driven e-commerce platform built with a **Distributed Microservices Architecture** using **Spring Boot 3**, **Spring Cloud (Gateway, Eureka)**, **MySQL**, **RabbitMQ**, and a modern **React (Vite) + Tailwind CSS** frontend.
 
 The platform provides comprehensive online shopping workflows, fine-grained Role-Based Access Control (RBAC), real-time updates via **Server-Sent Events (SSE)**, dynamic hierarchical categories, inventory reservation, and cloud-based media storage via **Supabase**.
 
