@@ -6,13 +6,6 @@
     "configurations": [
         {
             "type": "java",
-            "name": "orderApplication",
-            "request": "launch",
-            "mainClass": "com.order.order.orderApplication",
-            "projectName": "khara"
-        },
-        {
-            "type": "java",
             "name": "Current File",
             "request": "launch",
             "mainClass": "${file}"

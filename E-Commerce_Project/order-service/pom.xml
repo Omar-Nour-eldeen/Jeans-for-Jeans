@@ -8,10 +8,10 @@
 		<version>4.0.6</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.khara</groupId>
-	<artifactId>khara</artifactId>
+	<groupId>com.order</groupId>
+	<artifactId>order</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>khara</name>
+	<name>order</name>
 	<description/>
 	<url/>
 	<licenses>

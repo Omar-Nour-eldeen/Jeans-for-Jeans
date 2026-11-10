@@ -1,10 +1,10 @@
-package com.khara.khara;
+package com.order.order;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class KharaApplicationTests {
+class OrderApplicationTests {
 
 	@Test
 	void contextLoads() {
