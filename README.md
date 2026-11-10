@@ -1,2 +1,222 @@
-# Jeans-for-Jeans
-Full-stack E-Commerce platform built with Spring Boot Microservices, Spring Cloud (Gateway, Eureka), MySQL, and React (Vite). Features granular RBAC, real-time SSE permissions sync, hierarchical categories, and Supabase cloud storage.
+# 🛍️ Jeans For Jeans — Enterprise E-Commerce Microservices Platform
+
+An enterprise-grade, event-driven e-commerce platform built with a **Distributed Microservices Architecture** using **Spring Boot 3**, **Spring Cloud**, **MySQL**, **RabbitMQ**, and a modern **React (Vite) + Tailwind CSS** frontend.
+
+The platform provides comprehensive online shopping workflows, fine-grained Role-Based Access Control (RBAC), real-time updates via **Server-Sent Events (SSE)**, dynamic hierarchical categories, inventory reservation, and cloud-based media storage via **Supabase**.
+
+---
+
+## 📑 Table of Contents
+
+- [Architecture Overview](#-architecture-overview)
+- [Microservices Ecosystem](#-microservices-ecosystem)
+- [Key Features](#-key-features)
+  - [1. Security & Real-Time Identity Management (IAM)](#1-security--real-time-identity-management-iam)
+  - [2. Products & Hierarchical Categories](#2-products--hierarchical-categories)
+  - [3. Shopping Cart, Orders & Stock Reservation](#3-shopping-cart-orders--stock-reservation)
+  - [4. Multi-Role Dashboards](#4-multi-role-dashboards)
+- [Tech Stack](#-tech-stack)
+- [Prerequisites](#-prerequisites)
+- [Database Setup](#-database-setup)
+- [Running the Services (Step-by-Step)](#-running-the-services-step-by-step)
+- [Default Ports Reference](#-default-ports-reference)
+- [License](#-license)
+
+---
+
+## 🏛️ Architecture Overview
+
+The system strictly adheres to the **Database-per-Service** design pattern to decouple bounded contexts, maximize availability, and allow independent scaling.
+
+```
+                           ┌────────────────────────┐
+                           │   React 18 Frontend    │
+                           │     (Vite + Tailwind)  │
+                           └───────────┬────────────┘
+                                       │ :5173
+                                       ▼
+                           ┌────────────────────────┐
+                           │  Spring Cloud Gateway  │
+                           │         :8085          │
+                           └───────────┬────────────┘
+                                       │
+         ┌───────────────────┬─────────┴─────────┬───────────────────┐
+         │                   │                   │                   │
+         ▼                   ▼                   ▼                   ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│  Auth Service   │ │ Product Service │ │  Order Service  │ │  User Service   │
+│      :8081      │ │      :8083      │ │      :8084      │ │      :8082      │
+│  (MySQL + SSE)  │ │     (MySQL)     │ │     (MySQL)     │ │     (MySQL)     │
+└────────┬────────┘ └────────┬────────┘ └────────┬────────┘ └────────┬────────┘
+         │                   │                   │                   │
+         └───────────────────┴─────────┬─────────┴───────────────────┘
+                                       │
+                                       ▼
+                           ┌────────────────────────┐
+                           │ Eureka Service Registry│
+                           │         :8761          │
+                           └────────────────────────┘
+```
+
+---
+
+## 📦 Microservices Ecosystem
+
+| Microservice | Port | Description & Responsibilities |
+| :--- | :---: | :--- |
+| **`eureka`** | `8761` | Service Registry & Discovery for seamless inter-service lookup and dynamic client-side load balancing (`lb://`). |
+| **`gateway`** | `8085` | Reverse proxy edge gateway handling routing, global CORS policies, JWT validation filter, and route authorization checks. |
+| **`auth-service`** | `8081` | Authentication, JWT rotation, Password Reset, Employee RBAC, dynamic permissions, and real-time Server-Sent Events (SSE). |
+| **`product-service`** | `8083` | Catalogue management, multi-variant stock (`XS`, `S`, `M`, `L`, `XL`), parent-child hierarchical categories, and image metadata. |
+| **`order-service`** | `8084` | Shopping cart persistence, stock reservation, checkout lifecycle, and order processing. |
+| **`user-services`** | `8082` | Customer profile information, delivery addresses, and customer data management. |
+| **`frontend`** | `5173` | Responsive Single Page Application (SPA) offering customer storefronts and dedicated Admin / Employee management portals. |
+
+---
+
+## 🚀 Key Features
+
+### 1. Security & Real-Time Identity Management (IAM)
+- **Stateless JWT + Refresh Token Rotation:** Highly secure token lifecycle with automated Axios interceptors refreshing expired tokens transparently.
+- **Granular RBAC & Dynamic Permissions:** Beyond static roles (`ADMIN`, `EMPLOYEE`, `USER`), employees possess customizable granular privileges (e.g., `product:create`, `category:delete`, `order:update`).
+- **⚡ Real-Time Push via Server-Sent Events (SSE):**
+  - **Zero-Polling Permission Sync:** Permission edits propagate instantly (< 10 ms) across different browsers and active tabs without polling the server.
+  - **Instant Revocation & Forced Logout:** Deleting an employee immediately notifies their browser over the SSE channel, wipinng local credentials and redirecting them to `/login`.
+
+### 2. Products & Hierarchical Categories
+- **100% Database-Driven Category Hierarchy:** Self-referencing tree structure supporting Main Categories (`parentId = NULL`) and linked Subcategories.
+- **Relational Integrity Protection:** Built-in safeguards prevent accidental deletion of categories that have active products assigned.
+- **Variant & Inventory Matrix:** Product sizes and specific stock quantities are validated and tracked independently.
+- **Supabase Cloud Media Storage:** Direct multiple-image uploads to Supabase Storage buckets with cover-image assignment.
+
+### 3. Shopping Cart, Orders & Stock Reservation
+- **Concurrency & Inventory Reservation:** Products added to active checkouts reserve stock to prevent overselling.
+- **Full Order Lifecycle:** Complete state machine tracking: `PENDING` ➔ `PROCESSING` ➔ `SHIPPED` ➔ `DELIVERED` / `CANCELLED`.
+- **Dynamic Catalogue Filtering:** Real-time customer search, multi-category selection, price range filters, and responsive sorting.
+
+### 4. Multi-Role Dashboards
+- **Super Admin Dashboard:** KPI metrics (Revenue, Orders, Products, Users), employee access control, full catalogue oversight, and category hierarchy editor.
+- **Adaptive Employee Portal:** The employee's sidebar and accessible pages dynamically adapt based on granted permissions.
+
+---
+
+## 🛠️ Tech Stack
+
+### Backend
+- **Core:** Java 17, Spring Boot 3.x
+- **Spring Cloud:** Spring Cloud Gateway, Netflix Eureka Discovery Client & Server
+- **Security:** Spring Security 6, JWT (JSON Web Tokens), BCrypt
+- **Real-Time:** Spring Web MVC `SseEmitter` with automated keep-alive heartbeats
+- **Messaging:** RabbitMQ
+- **Database & Persistence:** MySQL 8, Spring Data JPA, Hibernate, HikariCP
+- **Build Tool:** Apache Maven (`mvnw`)
+
+### Frontend
+- **Framework & Tooling:** React 18, Vite
+- **Styling:** Tailwind CSS, PostCSS, Autoprefixer
+- **State Management:** React Context API (`AuthContext`, `ShopContext`)
+- **Routing:** React Router DOM v6
+- **HTTP Client:** Axios (configured with request/response interceptors)
+- **Cloud Storage:** Supabase JavaScript Client SDK
+- **Notifications:** React-Toastify
+
+---
+
+## ⚙️ Prerequisites
+
+Ensure you have the following installed locally:
+1. **Java Development Kit (JDK 17 or higher)**
+2. **Node.js (v18.x or higher) & npm**
+3. **MySQL Server 8.x** running on port `3306`
+4. **RabbitMQ Server** (Optional for basic flow, recommended for full async events)
+
+---
+
+## 🗄️ Database Setup
+
+Create the required MySQL databases for each microservice:
+
+```sql
+CREATE DATABASE IF NOT EXISTS `auth-service`;
+CREATE DATABASE IF NOT EXISTS `product-service`;
+CREATE DATABASE IF NOT EXISTS `order-service`;
+CREATE DATABASE IF NOT EXISTS `user-services`;
+```
+
+> **Note:** Check `application.properties` in each microservice directory to configure your MySQL username and password (default: `root` / `root` or `password`).
+
+---
+
+## 🏃 Running the Services (Step-by-Step)
+
+Start the microservices in the following recommended order to ensure proper service registration:
+
+### 1️⃣ Start Eureka Discovery Server
+```powershell
+cd eureka
+.\mvnw.cmd spring-boot:run
+```
+*Eureka Dashboard will be available at:* `http://localhost:8761`
+
+### 2️⃣ Start API Gateway
+```powershell
+cd gateway
+.\mvnw.cmd spring-boot:run
+```
+*Gateway will listen on:* `http://localhost:8085`
+
+### 3️⃣ Start Core Microservices
+Open separate terminal windows for each service:
+
+**Auth Service:**
+```powershell
+cd auth-service
+.\mvnw.cmd spring-boot:run
+```
+
+**Product Service:**
+```powershell
+cd product-service
+.\mvnw.cmd spring-boot:run
+```
+
+**Order Service:**
+```powershell
+cd order-service
+.\mvnw.cmd spring-boot:run
+```
+
+**User Service:**
+```powershell
+cd user-services
+.\mvnw.cmd spring-boot:run
+```
+
+### 4️⃣ Start Frontend Application
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+*Frontend application will run on:* `http://localhost:5173`
+
+---
+
+## 🔌 Default Ports Reference
+
+| Component | Port | Health / URL |
+| :--- | :---: | :--- |
+| **Eureka Server** | `8761` | [http://localhost:8761](http://localhost:8761) |
+| **API Gateway** | `8085` | [http://localhost:8085](http://localhost:8085) |
+| **Auth Service** | `8081` | [http://localhost:8081](http://localhost:8081) |
+| **User Service** | `8082` | [http://localhost:8082](http://localhost:8082) |
+| **Product Service** | `8083` | [http://localhost:8083](http://localhost:8083) |
+| **Order Service** | `8084` | [http://localhost:8084](http://localhost:8084) |
+| **Frontend (Vite SPA)** | `5173` | [http://localhost:5173](http://localhost:5173) |
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
+
