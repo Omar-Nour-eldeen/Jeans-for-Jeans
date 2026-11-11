@@ -1,0 +1,254 @@
+
+services:
+
+  # =========================
+  # Infrastructure
+  # =========================
+
+  mysql:
+    image: mysql:8.0
+    container_name: jeans-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: order
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: jeans-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # =========================
+  # Eureka Server
+  # =========================
+
+  eureka-server:
+    image: omarnoureldeen/eureka-server:latest
+    container_name: jeans-eureka
+    restart: unless-stopped
+    ports:
+      - "8761:8761"
+
+  # =========================
+  # Auth Service
+  # =========================
+
+  auth-service:
+    image: omarnoureldeen/auth-service:latest
+    container_name: jeans-auth
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8081
+
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/auth_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+
+      JWT_SECRET: ${JWT_SECRET:-CHANGE_THIS_TO_A_NEW_SECRET}
+      SPRING_MAIL_USERNAME: ${MAIL_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+
+      APP_FRONTEND_URL: http://localhost:5173
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    ports:
+      - "8081:8081"
+
+  # =========================
+  # Cart Service
+  # =========================
+
+  cart-service:
+    image: omarnoureldeen/cart-service:latest
+    container_name: jeans-cart
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8086
+      SPRING_APPLICATION_NAME: cart-service
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+    depends_on:
+      eureka-server:
+        condition: service_started
+    ports:
+      - "8086:8086"
+
+  # =========================
+  # Product Service
+  # =========================
+
+  product-service:
+    image: omarnoureldeen/product-service:latest
+    container_name: jeans-product
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8083
+
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/product-service?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    ports:
+      - "8083:8083"
+
+  # =========================
+  # Order Service
+  # =========================
+
+  order-service:
+    image: omarnoureldeen/order-service:latest
+    container_name: jeans-order
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8084
+
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/order?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+
+      SERVICES_PRODUCT_SERVICE: http://product-service:8083
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+      product-service:
+        condition: service_started
+    ports:
+      - "8084:8084"
+
+  # =========================
+  # User Service
+  # =========================
+
+  user-services:
+    image: omarnoureldeen/user-services:latest
+    container_name: jeans-user
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8092
+
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/userdb?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    ports:
+      - "8092:8092"
+
+  # =========================
+  # API Gateway
+  # =========================
+
+  gateway:
+    image: omarnoureldeen/gateway:latest
+    container_name: jeans-gateway
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8085
+
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+
+      JWT_SECRET: ${JWT_SECRET:-CHANGE_THIS_TO_A_NEW_SECRET}
+
+      SPRING_CLOUD_GATEWAY_ROUTES_8_URI: lb://cart-service
+
+    depends_on:
+      eureka-server:
+        condition: service_started
+      auth-service:
+        condition: service_started
+      product-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      cart-service:
+        condition: service_started
+      user-services:
+        condition: service_started
+    ports:
+      - "8085:8085"
+
+  # =========================
+  # React Frontend
+  # =========================
+
+  frontend:
+    image: omarnoureldeen/jeans-frontend:latest
+    container_name: jeans-frontend
+    restart: unless-stopped
+    depends_on:
+      gateway:
+        condition: service_started
+    ports:
+      - "5173:80"
+
+# =========================
+# Persistent Volumes
+# =========================
+
+volumes:
+  mysql_data:

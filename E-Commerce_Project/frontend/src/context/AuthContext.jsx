@@ -73,7 +73,7 @@ export const AuthProvider = ({ children }) => {
 
     let es = null;
     try {
-      es = new EventSource(`http://localhost:8085/auth/subscribe/${userId}`);
+      es = new EventSource(`/api/auth/subscribe/${userId}`);
 
       es.addEventListener("permissions-updated", async (event) => {
         try {
