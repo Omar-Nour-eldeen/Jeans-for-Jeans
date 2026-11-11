@@ -212,9 +212,14 @@ services:
   # =========================
   # React Frontend
   # =========================
-
   frontend:
     image: omarnoureldeen/jeans-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
     container_name: jeans-frontend
     restart: unless-stopped
     depends_on:
