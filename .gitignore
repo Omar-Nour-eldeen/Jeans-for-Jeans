@@ -1,0 +1,23 @@
+# Ignore all environment files
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Allow example files
+!.env.example
+!**/.env.example
+
+# Build files
+**/target/
+**/node_modules/
+**/dist/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
