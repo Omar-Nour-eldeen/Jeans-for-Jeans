@@ -193,7 +193,6 @@ services:
       SERVER_PORT: 8085
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       JWT_SECRET: ${JWT_SECRET}
-      SPRING_CLOUD_GATEWAY_ROUTES_8_URI: lb://cart-service
     depends_on:
       eureka-server:
         condition: service_started
