@@ -10,7 +10,7 @@ services:
     container_name: jeans-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: order
     ports:
       - "3306:3306"
@@ -56,24 +56,18 @@ services:
     restart: unless-stopped
     environment:
       SERVER_PORT: 8081
-
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/auth_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
-
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: guest
       SPRING_RABBITMQ_PASSWORD: guest
-
-      JWT_SECRET: ${JWT_SECRET:-CHANGE_THIS_TO_A_NEW_SECRET}
-      SPRING_MAIL_USERNAME: ${MAIL_USERNAME:-}
-      SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD:-}
-
+      JWT_SECRET: ${JWT_SECRET}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
       APP_FRONTEND_URL: http://localhost:5173
-
     depends_on:
       mysql:
         condition: service_healthy
@@ -113,14 +107,11 @@ services:
     restart: unless-stopped
     environment:
       SERVER_PORT: 8083
-
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/product-service?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
-
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
-
     depends_on:
       mysql:
         condition: service_healthy
@@ -139,21 +130,16 @@ services:
     restart: unless-stopped
     environment:
       SERVER_PORT: 8084
-
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/order?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
-
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
-
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: guest
       SPRING_RABBITMQ_PASSWORD: guest
-
       SERVICES_PRODUCT_SERVICE: http://product-service:8083
-
     depends_on:
       mysql:
         condition: service_healthy
@@ -176,19 +162,15 @@ services:
     restart: unless-stopped
     environment:
       SERVER_PORT: 8092
-
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/userdb?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
-
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
-
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: guest
       SPRING_RABBITMQ_PASSWORD: guest
-
     depends_on:
       mysql:
         condition: service_healthy
@@ -209,13 +191,9 @@ services:
     restart: unless-stopped
     environment:
       SERVER_PORT: 8085
-
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-
-      JWT_SECRET: ${JWT_SECRET:-CHANGE_THIS_TO_A_NEW_SECRET}
-
+      JWT_SECRET: ${JWT_SECRET}
       SPRING_CLOUD_GATEWAY_ROUTES_8_URI: lb://cart-service
-
     depends_on:
       eureka-server:
         condition: service_started
