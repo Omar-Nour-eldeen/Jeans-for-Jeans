@@ -47,18 +47,18 @@ function Register() {
   };
 
   return (
-    <div className="w-full h-screen flex items-start">
-      <div className="relative w-1/2 h-full flex flex-col">
-        <img className="w-full h-full" src={assets.present} alt="Welcome" />
+    <div className="w-full min-h-screen flex items-center justify-center lg:items-start bg-gray-100">
+      <div className="relative w-1/2 h-screen hidden lg:flex flex-col sticky top-0">
+        <img className="w-full h-full object-cover" src={assets.present} alt="Welcome" />
       </div>
-      <div className="w-1/2 h-full bg-gray-100 flex flex-col p-20 justify-between">
-        <h1 className="text-xl text-stone-950 font-semibold">
-          JeansForJeans Brand
-        </h1>
-        <div>
-          <img src={assets.Jeans} alt="" className="w-28" />
+      <div className="w-full lg:w-1/2 min-h-screen bg-gray-100 flex flex-col p-6 sm:p-12 md:p-16 lg:p-20 justify-between overflow-y-auto">
+        <div className="flex items-center justify-between mb-4 lg:mb-0">
+          <h1 className="text-xl text-stone-950 font-semibold">
+            JeansForJeans Brand
+          </h1>
+          <img src={assets.Jeans} alt="Logo" className="w-24 sm:w-28" />
         </div>
-        <div className="w-full flex flex-col max-w-125">
+        <div className="w-full flex flex-col max-w-md mx-auto my-auto py-6">
           {isRegistered ? (
             <div className="flex flex-col items-start gap-4">
               <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center text-green-600">

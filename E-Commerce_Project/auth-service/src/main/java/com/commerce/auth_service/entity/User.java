@@ -38,6 +38,11 @@ public class User {
     @Builder.Default
     private Status status = Status.PENDING;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "auth_provider", nullable = false)
+    @Builder.Default
+    private AuthProvider authProvider = AuthProvider.LOCAL;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -67,5 +72,9 @@ public class User {
         public boolean isActive() {
             return this == ACTIVE;
         }
+    }
+
+    public enum AuthProvider {
+        LOCAL, GOOGLE
     }
 }

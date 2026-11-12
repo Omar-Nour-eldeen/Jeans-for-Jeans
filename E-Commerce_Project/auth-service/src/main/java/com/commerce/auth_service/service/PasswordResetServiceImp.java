@@ -17,7 +17,10 @@ import org.springframework.stereotype.Service;
 import com.commerce.auth_service.dto.ResetPasswordRequest;
 import com.commerce.auth_service.entity.PasswordResetToken;
 import com.commerce.auth_service.entity.User;
+import com.commerce.auth_service.exception.AccountNotActiveException;
+import com.commerce.auth_service.exception.OAuthAccountException;
 import com.commerce.auth_service.exception.PasswordMismatchException;
+import com.commerce.auth_service.exception.ResourceNotFoundException;
 import com.commerce.auth_service.exception.TokenInvalidException;
 import com.commerce.auth_service.interfaces.IPasswordResetService;
 import com.commerce.auth_service.repository.PasswordResetTokenRepository;
@@ -44,20 +47,24 @@ public class PasswordResetServiceImp implements IPasswordResetService {
 
     @Transactional
     public void forgotPassword(String email) {
-
-        Optional<User> userOpt = userRepository.findByEmail(email);
-
-        if (userOpt.isEmpty()) {
-            log.warn("Password reset requested for non-existent email: {}",
-                    email);
-            return;
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Email is required");
         }
 
-        User user = userOpt.get();
+        String cleanEmail = email.trim().toLowerCase();
+        User user = userRepository.findByEmail(cleanEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("No account found with email: " + cleanEmail));
+
+        if (user.getAuthProvider() == User.AuthProvider.GOOGLE) {
+            throw new OAuthAccountException(
+                "This account was registered using Google. Please log in directly with Google."
+            );
+        }
 
         if (!user.getStatus().isActive()) {
-            log.warn("Password reset for inactive user: {}", email);
-            return; 
+            throw new AccountNotActiveException(
+                "Account is " + user.getStatus().name().toLowerCase() + ". Please verify your email first."
+            );
         }
 
         tokenRepository.deleteAllByUserId(user.getId());
@@ -77,7 +84,7 @@ public class PasswordResetServiceImp implements IPasswordResetService {
 
         emailService.sendPasswordResetEmail(user.getEmail(), rawToken);
 
-        log.info("Password reset token generated for user: {}", email);
+        log.info("Password reset token generated for user: {}", cleanEmail);
     }
 
 

@@ -8,6 +8,7 @@ import { getProfile } from "../services/userService";
 function Navbar() {
   const { setShowSearch, getCartCount, navigate } = useContext(ShopContext);
   const { logout, auth } = useAuth();
+  const [visible, setVisible] = useState(false);
   const [profile, setProfile] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("user_profile") || "null");
@@ -153,6 +154,150 @@ function Navbar() {
             </p>
           )}
         </Link>
+
+        {/* Mobile menu toggle button */}
+        <button
+          type="button"
+          onClick={() => setVisible(true)}
+          className="sm:hidden p-1 text-gray-700 hover:text-black cursor-pointer focus:outline-none"
+          aria-label="Open mobile menu"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Mobile Drawer Overlay */}
+      <div
+        className={`fixed inset-0 z-50 bg-black/40 transition-opacity duration-300 sm:hidden ${
+          visible ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setVisible(false)}
+      >
+        <div
+          className={`absolute top-0 right-0 bottom-0 w-3/4 max-w-xs bg-white shadow-2xl p-6 flex flex-col gap-4 transition-transform duration-300 ease-in-out ${
+            visible ? "translate-x-0" : "translate-x-full"
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between pb-4 border-b border-gray-200">
+            <img src={assets.Jeans} alt="Logo" className="w-28" />
+            <button
+              onClick={() => setVisible(false)}
+              className="p-1.5 text-gray-500 hover:text-black cursor-pointer"
+              aria-label="Close menu"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* User info on mobile */}
+          {registeredEmail && (
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center text-xs font-bold shrink-0">
+                {initials || "U"}
+              </div>
+              <div className="overflow-hidden">
+                {fullName && <p className="text-xs font-bold text-gray-900 truncate">{fullName}</p>}
+                <p className="text-[11px] text-gray-500 truncate">{registeredEmail}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Nav Links */}
+          <div className="flex flex-col gap-1 py-2 text-sm font-medium text-gray-800">
+            <NavLink
+              onClick={() => setVisible(false)}
+              to="/"
+              className={({ isActive }) =>
+                `py-2.5 px-3 rounded-lg transition ${
+                  isActive ? "bg-black text-white font-semibold" : "hover:bg-gray-100"
+                }`
+              }
+            >
+              HOME
+            </NavLink>
+            <NavLink
+              onClick={() => setVisible(false)}
+              to="/collection"
+              className={({ isActive }) =>
+                `py-2.5 px-3 rounded-lg transition ${
+                  isActive ? "bg-black text-white font-semibold" : "hover:bg-gray-100"
+                }`
+              }
+            >
+              COLLECTION
+            </NavLink>
+            <NavLink
+              onClick={() => setVisible(false)}
+              to="/about"
+              className={({ isActive }) =>
+                `py-2.5 px-3 rounded-lg transition ${
+                  isActive ? "bg-black text-white font-semibold" : "hover:bg-gray-100"
+                }`
+              }
+            >
+              ABOUT
+            </NavLink>
+            <NavLink
+              onClick={() => setVisible(false)}
+              to="/contact"
+              className={({ isActive }) =>
+                `py-2.5 px-3 rounded-lg transition ${
+                  isActive ? "bg-black text-white font-semibold" : "hover:bg-gray-100"
+                }`
+              }
+            >
+              CONTACT
+            </NavLink>
+            <NavLink
+              onClick={() => setVisible(false)}
+              to="/orders"
+              className={({ isActive }) =>
+                `py-2.5 px-3 rounded-lg transition ${
+                  isActive ? "bg-black text-white font-semibold" : "hover:bg-gray-100"
+                }`
+              }
+            >
+              MY ORDERS
+            </NavLink>
+            <NavLink
+              onClick={() => setVisible(false)}
+              to="/profile"
+              className={({ isActive }) =>
+                `py-2.5 px-3 rounded-lg transition ${
+                  isActive ? "bg-black text-white font-semibold" : "hover:bg-gray-100"
+                }`
+              }
+            >
+              MY PROFILE
+            </NavLink>
+          </div>
+
+          {/* Logout button */}
+          {auth?.accessToken ? (
+            <button
+              onClick={() => {
+                setVisible(false);
+                handleLogout();
+              }}
+              className="mt-auto w-full py-2.5 text-sm font-semibold text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition cursor-pointer"
+            >
+              Logout
+            </button>
+          ) : (
+            <Link
+              onClick={() => setVisible(false)}
+              to="/login"
+              className="mt-auto w-full py-2.5 text-sm font-semibold text-center text-white bg-black rounded-lg hover:bg-gray-800 transition"
+            >
+              Login
+            </Link>
+          )}
+        </div>
       </div>
     </div>
   );

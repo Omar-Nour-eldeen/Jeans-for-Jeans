@@ -57,17 +57,17 @@ function ResetPassword() {
   };
 
   return (
-    <div className="w-full h-screen flex items-start">
-      <div className="relative w-1/2 h-full hidden md:flex flex-col">
+    <div className="w-full min-h-screen flex items-center justify-center md:items-start bg-gray-100">
+      <div className="relative w-1/2 h-screen hidden md:flex flex-col sticky top-0">
         <img className="w-full h-full object-cover" src={assets.present} alt="New Password" />
       </div>
 
-      <div className="w-full md:w-1/2 h-full bg-gray-100 flex flex-col p-10 md:p-20 justify-between">
-        <h1 className="text-xl text-stone-950 font-semibold">
+      <div className="w-full md:w-1/2 min-h-screen bg-gray-100 flex flex-col p-6 sm:p-12 md:p-16 lg:p-20 justify-between overflow-y-auto">
+        <h1 className="text-xl text-stone-950 font-semibold mb-4 md:mb-0">
           JeansForJeans Brand
         </h1>
 
-        <div className="w-full max-w-125">
+        <div className="w-full max-w-md mx-auto my-auto py-6">
           {!token ? (
             <div className="flex flex-col gap-4">
               <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600">

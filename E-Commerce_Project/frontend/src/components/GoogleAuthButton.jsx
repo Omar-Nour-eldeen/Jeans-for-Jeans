@@ -11,7 +11,9 @@ function GoogleAuthButton({ mode = "signin" }) {
   const [loading, setLoading] = useState(false);
   const [googleReady, setGoogleReady] = useState(false);
 
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const clientId =
+    import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+    "94443026462-4eksrijm2d645ouuvcoc1bq3ulhl8ia2.apps.googleusercontent.com";
 
   const handleCredentialResponse = async (response) => {
     if (!response?.credential) {

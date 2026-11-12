@@ -67,6 +67,7 @@ services:
 
   auth-service:
     image: omarnoureldeen/auth-service:latest
+    build: ./auth-service
     container_name: jeans-auth
     restart: unless-stopped
     environment:
@@ -214,6 +215,7 @@ services:
 
   gateway:
     image: omarnoureldeen/gateway:latest
+    build: ./gateway
     container_name: jeans-gateway
     restart: unless-stopped
     environment:
@@ -248,6 +250,7 @@ services:
       args:
         VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
         VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-94443026462-4eksrijm2d645ouuvcoc1bq3ulhl8ia2.apps.googleusercontent.com}
     container_name: jeans-frontend
     restart: unless-stopped
     depends_on:

@@ -58,10 +58,11 @@ public class AuthServiceImp implements IAuthService {
 
         User user = User.builder()
                 .name(request.getName())
-                .email(request.getEmail())
+                .email(request.getEmail().toLowerCase().trim())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(User.Role.USER)  
                 .status(User.Status.PENDING)  
+                .authProvider(User.AuthProvider.LOCAL)
                 .build();
 
         userRepository.save(user);
@@ -148,10 +149,14 @@ public class AuthServiceImp implements IAuthService {
                     .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
                     .role(User.Role.USER)
                     .status(User.Status.ACTIVE)
+                    .authProvider(User.AuthProvider.GOOGLE)
                     .build();
             userRepository.save(user);
             userEventPublisher.publishUserRegistered(UserRegisteredEvent.from(user));
         } else {
+            if (user.getAuthProvider() == null) {
+                user.setAuthProvider(User.AuthProvider.GOOGLE);
+            }
             if (user.getStatus() == User.Status.PENDING) {
                 user.setStatus(User.Status.ACTIVE);
                 userRepository.save(user);

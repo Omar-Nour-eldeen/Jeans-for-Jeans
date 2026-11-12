@@ -36,15 +36,15 @@ public class EmailServiceImp implements IEmailService {
             MimeMessageHelper helper = new MimeMessageHelper(
                     message, true, "UTF-8");
 
-            helper.setFrom(fromEmail);
+            helper.setFrom(fromEmail, "JeansForJeans");
             helper.setTo(toEmail);
-            helper.setSubject("Reset Your Password");
+            helper.setSubject("Reset Your Password - JeansForJeans");
             helper.setText(buildEmailBody(resetLink), true); // true = HTML
 
             mailSender.send(message);
             log.info("Password reset email sent to: {}", toEmail);
 
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Failed to send reset email to: {}", toEmail, e);
             throw new RuntimeException("Failed to send email. Please check your email credentials.");
         }
@@ -61,7 +61,7 @@ public class EmailServiceImp implements IEmailService {
             MimeMessageHelper helper = new MimeMessageHelper(
                     message, true, "UTF-8");
 
-            helper.setFrom(fromEmail);
+            helper.setFrom(fromEmail, "JeansForJeans");
             helper.setTo(toEmail);
             helper.setSubject("Verify Your Email Address - JeansForJeans");
             helper.setText(buildVerificationEmailBody(verifyLink), true);
@@ -69,7 +69,7 @@ public class EmailServiceImp implements IEmailService {
             mailSender.send(message);
             log.info("Verification email sent to: {}", toEmail);
 
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Failed to send verification email to: {}", toEmail, e);
             throw new RuntimeException("Failed to send verification email. Please check your email credentials.");
         }
