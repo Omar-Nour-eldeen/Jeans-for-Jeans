@@ -19,11 +19,24 @@ public class EmailServiceImp implements IEmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${app.mail.from:${spring.mail.username}}")
+    @Value("${app.mail.from:}")
     private String fromEmail;
+
+    @Value("${spring.mail.username:}")
+    private String mailUsername;
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
+
+    private String getSenderEmail() {
+        if (fromEmail != null && !fromEmail.trim().isEmpty()) {
+            return fromEmail.trim();
+        }
+        if (mailUsername != null && !mailUsername.trim().isEmpty()) {
+            return mailUsername.trim();
+        }
+        return "omar.nour.eldeen.2005@gmail.com";
+    }
 
     public void sendPasswordResetEmail(String toEmail,
             String rawToken) {
@@ -36,7 +49,7 @@ public class EmailServiceImp implements IEmailService {
             MimeMessageHelper helper = new MimeMessageHelper(
                     message, true, "UTF-8");
 
-            helper.setFrom(fromEmail, "JeansForJeans");
+            helper.setFrom(getSenderEmail(), "JeansForJeans");
             helper.setTo(toEmail);
             helper.setSubject("Reset Your Password - JeansForJeans");
             helper.setText(buildEmailBody(resetLink), true); // true = HTML
@@ -61,7 +74,7 @@ public class EmailServiceImp implements IEmailService {
             MimeMessageHelper helper = new MimeMessageHelper(
                     message, true, "UTF-8");
 
-            helper.setFrom(fromEmail, "JeansForJeans");
+            helper.setFrom(getSenderEmail(), "JeansForJeans");
             helper.setTo(toEmail);
             helper.setSubject("Verify Your Email Address - JeansForJeans");
             helper.setText(buildVerificationEmailBody(verifyLink), true);
