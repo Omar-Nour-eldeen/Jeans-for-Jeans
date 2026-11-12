@@ -19,7 +19,7 @@ public class EmailServiceImp implements IEmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
+    @Value("${app.mail.from:${spring.mail.username}}")
     private String fromEmail;
 
     @Value("${app.frontend-url}")
