@@ -9,6 +9,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import {
   login as loginApi,
+  loginWithGoogle as loginWithGoogleApi,
   register as registerApi,
   logout as logoutApi,
   logoutAll as logoutAllApi,
@@ -129,6 +130,12 @@ export const AuthProvider = ({ children }) => {
     return data;
   }, []);
 
+  const loginWithGoogle = useCallback(async (idToken) => {
+    const data = await loginWithGoogleApi(idToken);
+    setAuth(data);
+    return data;
+  }, []);
+
   const logout = useCallback(async () => {
     await logoutApi();
     setAuth(null);
@@ -199,6 +206,7 @@ export const AuthProvider = ({ children }) => {
     () => ({
       auth,
       login,
+      loginWithGoogle,
       register,
       logout,
       logoutAll,
@@ -213,6 +221,7 @@ export const AuthProvider = ({ children }) => {
     [
       auth,
       login,
+      loginWithGoogle,
       register,
       logout,
       logoutAll,

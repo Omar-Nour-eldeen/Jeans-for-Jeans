@@ -39,6 +39,9 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                         "/auth/refresh",
                         "/auth/forgot-password",   
                         "/auth/reset-password",
+                        "/auth/verify-email",
+                        "/auth/resend-verification",
+                        "/auth/google",
                         "/auth/subscribe",
                         "/orders/reserved-stock" ) ;
 

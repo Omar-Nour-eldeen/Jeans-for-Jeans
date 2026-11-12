@@ -83,3 +83,19 @@ export const resetPassword = async ({ token, newPassword, confirmPassword }) => 
   });
   return data;
 };
+
+export const verifyEmail = async (token) => {
+  const { data } = await api.get(`/auth/verify-email?token=${encodeURIComponent(token)}`);
+  return data;
+};
+
+export const resendVerification = async (email) => {
+  const { data } = await api.post("/auth/resend-verification", { email });
+  return data;
+};
+
+export const loginWithGoogle = async (idToken) => {
+  const { data } = await axios.post(`${BASE_URL}/auth/google`, { idToken });
+  localStorage.setItem("auth", JSON.stringify(data));
+  return data;
+};

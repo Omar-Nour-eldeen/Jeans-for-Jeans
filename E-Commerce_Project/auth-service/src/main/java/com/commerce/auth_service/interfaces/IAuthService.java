@@ -5,6 +5,7 @@ import com.commerce.auth_service.dto.*;
 public interface IAuthService {
     AuthResponse register(RegisterRequest request);
     AuthResponse login(LoginRequest request);
+    AuthResponse loginWithGoogle(String idToken);
     AuthResponse refresh(String rawRefreshToken);
     void logout(String rawRefreshToken);
     void logoutAll(String userId);

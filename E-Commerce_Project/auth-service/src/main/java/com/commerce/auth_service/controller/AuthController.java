@@ -24,6 +24,8 @@ public class AuthController {
     private com.commerce.auth_service.service.JwtServiceImp jwtService;
     @Autowired
     private com.commerce.auth_service.service.SseEmitterService sseEmitterService;
+    @Autowired
+    private com.commerce.auth_service.service.EmailVerificationServiceImp emailVerificationService;
 
     @GetMapping(value = "/subscribe/{userId}", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
     public org.springframework.web.servlet.mvc.method.annotation.SseEmitter subscribe(
@@ -40,6 +42,11 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody @Valid LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> googleLogin(@RequestBody @Valid GoogleLoginRequest request) {
+        return ResponseEntity.ok(authService.loginWithGoogle(request.getIdToken()));
     }
 
     @PostMapping("/refresh")
@@ -96,6 +103,24 @@ public class AuthController {
 
         return ResponseEntity.ok(Map.of(
                 "message", "Password reset successfully. Please log in."));
+    }
+
+    @GetMapping("/verify-email")
+    public ResponseEntity<Map<String, String>> verifyEmail(@RequestParam String token) {
+        emailVerificationService.verifyEmail(token);
+        return ResponseEntity.ok(Map.of(
+                "message", "Email verified successfully! Your account is now active. You can log in."));
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<Map<String, String>> resendVerification(@RequestBody Map<String, String> payload) {
+        String email = payload.get("email");
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Email is required."));
+        }
+        emailVerificationService.resendVerificationEmail(email.trim());
+        return ResponseEntity.ok(Map.of(
+                "message", "A new verification email has been sent to your address."));
     }
 
 }

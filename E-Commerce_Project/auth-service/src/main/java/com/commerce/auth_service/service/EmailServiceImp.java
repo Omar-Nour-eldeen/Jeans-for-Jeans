@@ -46,8 +46,62 @@ public class EmailServiceImp implements IEmailService {
 
         } catch (MessagingException e) {
             log.error("Failed to send reset email to: {}", toEmail, e);
-            throw new RuntimeException("Failed to send email. Please try again.");
+            throw new RuntimeException("Failed to send email. Please check your email credentials.");
         }
+    }
+
+    @Override
+    public void sendEmailVerificationEmail(String toEmail, String rawToken) {
+        try {
+            String verifyLink = frontendUrl
+                    + "/verify-email?token="
+                    + rawToken;
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(
+                    message, true, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Verify Your Email Address - JeansForJeans");
+            helper.setText(buildVerificationEmailBody(verifyLink), true);
+
+            mailSender.send(message);
+            log.info("Verification email sent to: {}", toEmail);
+
+        } catch (MessagingException e) {
+            log.error("Failed to send verification email to: {}", toEmail, e);
+            throw new RuntimeException("Failed to send verification email. Please check your email credentials.");
+        }
+    }
+
+    private String buildVerificationEmailBody(String verifyLink) {
+        return """
+                <html>
+                <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #111;">Welcome to JeansForJeans!</h2>
+                    <p style="color: #444; font-size: 15px;">Thank you for registering. Please confirm your email address by clicking the button below:</p>
+                    <a href="%s"
+                       style="display: inline-block;
+                              padding: 12px 28px;
+                              background-color: #000;
+                              color: #fff;
+                              text-decoration: none;
+                              border-radius: 8px;
+                              font-weight: bold;
+                              margin: 20px 0;">
+                        Verify My Email
+                    </a>
+                    <p style="color: #666; font-size: 13px;">
+                        This verification link expires in <strong>24 hours</strong>.
+                    </p>
+                    <p style="color: #888; font-size: 12px;">
+                        If the button doesn't work, copy and paste this link into your browser:<br/>
+                        <a href="%s" style="color: #4F46E5;">%s</a>
+                    </p>
+                </body>
+                </html>
+                """.formatted(verifyLink, verifyLink, verifyLink);
     }
 
     private String buildEmailBody(String resetLink) {
