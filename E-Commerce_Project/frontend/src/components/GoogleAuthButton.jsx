@@ -83,6 +83,7 @@ function GoogleAuthButton({ mode = "signin" }) {
           text: mode === "signup" ? "signup_with" : "signin_with",
           shape: "pill",
           logo_alignment: "left",
+          locale: "en",
         });
 
         setGoogleReady(true);
@@ -100,7 +101,7 @@ function GoogleAuthButton({ mode = "signin" }) {
     if (!existingScript) {
       const script = document.createElement("script");
       script.id = "google-gsi-client";
-      script.src = "https://accounts.google.com/gsi/client";
+      script.src = "https://accounts.google.com/gsi/client?hl=en";
       script.async = true;
       script.defer = true;
       script.onload = initializeGsi;

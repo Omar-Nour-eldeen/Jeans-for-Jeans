@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "react-toastify";
 import GoogleAuthButton from "../components/GoogleAuthButton";
+import { resendVerification } from "../services/authService";
 
 function Register() {
   const { register } = useAuth();
@@ -19,9 +20,23 @@ function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleResend = async () => {
+    if (!formData.email) return;
+    setIsResending(true);
+    try {
+      const res = await resendVerification(formData.email);
+      toast.success(res?.message || "Verification email resent! Please check your inbox and spam folder.");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to resend verification email.");
+    } finally {
+      setIsResending(false);
+    }
   };
 
   const onSubmitHandler = async (e) => {
@@ -71,7 +86,22 @@ function Register() {
                 We've sent a verification link to <strong className="text-gray-900">{formData.email}</strong>. 
                 Please click the link in your email to verify and activate your account before logging in.
               </p>
-              <div className="w-full mt-4 flex flex-col gap-2">
+
+              <div className="w-full p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 leading-relaxed">
+                <p className="font-semibold mb-1">Didn't find the email in your inbox?</p>
+                <p>Please check your <strong>Spam / Junk (الرسائل غير المرغوب فيها)</strong> folder, as automated emails can often land there during development.</p>
+              </div>
+
+              <div className="w-full mt-2 flex flex-col gap-2.5">
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={isResending}
+                  className="w-full py-3 text-sm font-medium text-black border border-black rounded-full text-center hover:bg-gray-100 transition disabled:opacity-50 cursor-pointer"
+                >
+                  {isResending ? "Resending verification email..." : "Resend Verification Email"}
+                </button>
+
                 <Link
                   to="/login"
                   className="w-full py-3.5 text-sm font-semibold text-white bg-black rounded-full text-center hover:bg-gray-800 transition"

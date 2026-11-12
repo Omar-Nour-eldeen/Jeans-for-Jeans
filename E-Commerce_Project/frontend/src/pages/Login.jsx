@@ -4,6 +4,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "react-toastify";
 import GoogleAuthButton from "../components/GoogleAuthButton";
+import { resendVerification } from "../services/authService";
 
 function Login() {
   const { login } = useAuth();
@@ -15,9 +16,29 @@ function Login() {
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState("");
+  const [isResending, setIsResending] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleResendVerification = async () => {
+    if (!pendingVerificationEmail) return;
+    setIsResending(true);
+    try {
+      const res = await resendVerification(pendingVerificationEmail);
+      toast.success(
+        res?.message ||
+          "Verification email resent! Please check your inbox and spam folder."
+      );
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || "Failed to resend verification email."
+      );
+    } finally {
+      setIsResending(false);
+    }
   };
 
   const onSubmitHandler = async (event) => {
@@ -55,7 +76,14 @@ function Login() {
 
       navigate(targetPath, { replace: true });
     } catch (error) {
-      toast.error(error.response?.data?.message || "Login failed");
+      const msg = error.response?.data?.message || "Login failed";
+      toast.error(msg);
+      if (
+        msg.toLowerCase().includes("pending") ||
+        msg.toLowerCase().includes("verify")
+      ) {
+        setPendingVerificationEmail(formData.email);
+      }
     }
   };
 
@@ -124,6 +152,30 @@ function Login() {
               Forgot Password?
             </Link>
           </div>
+
+          {pendingVerificationEmail && (
+            <div className="w-full mt-3 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 flex flex-col gap-2">
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div className="flex flex-col gap-1">
+                  <p className="font-semibold text-gray-900">Account Pending Verification</p>
+                  <p className="text-gray-600">
+                    Your account is registered but not verified yet. Please check your inbox and <strong>Spam / Junk</strong> folder for the activation link.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={isResending}
+                className="mt-1 w-full py-2 px-3 text-xs font-semibold text-black bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition disabled:opacity-50 text-center cursor-pointer shadow-sm"
+              >
+                {isResending ? "Resending verification email..." : `Resend verification link to ${pendingVerificationEmail}`}
+              </button>
+            </div>
+          )}
 
           <div className="w-full flex flex-col my-3">
             <button type="submit" className="w-full text-white my-2 cursor-pointer active:bg-gray-700 bg-black rounded-full p-4 text-center flex items-center justify-center font-medium">
