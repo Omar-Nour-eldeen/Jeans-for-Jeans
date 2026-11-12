@@ -95,10 +95,13 @@ function Login() {
               className="w-full text-stone-950 py-2 my-2 bg-transparent border-b border-black outline-none focus:outline-none"
             />
           </div>
-          <div className=" w-full flex items-center justify-between">
-            <p className="text-sm hover:font-bold font-medium whitespace-nowrap cursor-pointer underline underline-offset-2">
-              Forget Password ?
-            </p>
+          <div className="w-full flex items-center justify-end">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-gray-600 hover:text-black hover:font-bold font-medium whitespace-nowrap cursor-pointer underline underline-offset-2 transition"
+            >
+              Forgot Password?
+            </Link>
           </div>
 
           <div className="w-full flex flex-col my-4">

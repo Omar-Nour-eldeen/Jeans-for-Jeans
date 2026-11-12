@@ -69,3 +69,17 @@ export const refreshSession = async () => {
 // Helper
 export const getStoredAuth = () =>
   JSON.parse(localStorage.getItem("auth") || "null");
+
+export const forgotPassword = async (email) => {
+  const { data } = await api.post("/auth/forgot-password", { email });
+  return data;
+};
+
+export const resetPassword = async ({ token, newPassword, confirmPassword }) => {
+  const { data } = await api.post("/auth/reset-password", {
+    token,
+    newPassword,
+    confirmPassword,
+  });
+  return data;
+};

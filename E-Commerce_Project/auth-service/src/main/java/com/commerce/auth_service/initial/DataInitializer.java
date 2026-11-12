@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +30,12 @@ public class DataInitializer implements ApplicationRunner {
     private  UserRepository userRepository;
     @Autowired
     private  PasswordEncoder passwordEncoder;
+
+    @Value("${SUPER_ADMIN_EMAIL:}")
+    private String superAdminEmail;
+
+    @Value("${SUPER_ADMIN_PASSWORD:}")
+    private String superAdminPassword;
 
     private static final Map<String, String> ALL_PERMISSIONS = Map.ofEntries(
         // Product
@@ -168,7 +175,10 @@ public class DataInitializer implements ApplicationRunner {
     }
 
     private void initSuperAdmin() {
-        String superAdminEmail = "superadmin@system.com";
+        if (superAdminEmail == null || superAdminEmail.isBlank() ||
+            superAdminPassword == null || superAdminPassword.isBlank()) {
+            return;
+        }
 
         if (userRepository.existsByEmail(superAdminEmail)) {
             return;
@@ -176,7 +186,7 @@ public class DataInitializer implements ApplicationRunner {
 
         User superAdmin = User.builder()
                 .email(superAdminEmail)
-                .passwordHash(passwordEncoder.encode("SuperAdmin@123"))
+                .passwordHash(passwordEncoder.encode(superAdminPassword))
                 .role(User.Role.ADMIN)
                 .status(User.Status.ACTIVE)
                 .build();
