@@ -141,6 +141,7 @@ services:
       SPRING_DATASOURCE_URL: ${PRODUCT_DB_URL:-jdbc:mysql://mysql:3306/product-service?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
       SPRING_DATASOURCE_USERNAME: ${DB_USER:-root}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-${MYSQL_ROOT_PASSWORD}}
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.MySQLDialect
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
     depends_on:
