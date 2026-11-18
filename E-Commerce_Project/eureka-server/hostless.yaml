@@ -1,3 +1,28 @@
+build:
+  command: ""
+  system: docker
+  min_cpu: 0.01
+  max_cpu: 2
+  min_memory: 256
+  max_memory: 10240
+dockerfile_path: Dockerfile
+working_directory: E-Commerce_Project/eureka-server
+build_context_directory: ""
+pre_build_command: ""
+post_build_command: ""
+start_command: ""
+scaling:
+  min_cpu: 0.01
+  max_cpu: 0.1
+  min_memory: 128
+  max_memory: 256
+  min_replicas: 1
+  max_replicas: 1
 health_check:
   type: tcp
   interval_in_seconds: 10
+cron_jobs: []
+workers: []
+review_apps:
+  enabled: false
+  ttl_days: 1
