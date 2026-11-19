@@ -74,7 +74,8 @@ export const AuthProvider = ({ children }) => {
 
     let es = null;
     try {
-      es = new EventSource(`/api/auth/subscribe/${userId}`);
+      const BASE_URL = import.meta.env.PROD ? (import.meta.env.VITE_API_URL || "") : "/api";
+      es = new EventSource(`${BASE_URL}/auth/subscribe/${userId}`);
 
       es.addEventListener("permissions-updated", async (event) => {
         try {
