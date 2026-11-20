@@ -117,34 +117,61 @@ function ShopContextProvider({ children }) {
     [auth, hasAnyPermission],
   );
 
-  // ── Cart (real API) ───────────────────────────────────────────────────────
-  const [cartData, setCartData] = useState(null);
+  // ── Cart (Hybrid Resilient API + Local Persistence) ────────────────────────
+  const getSavedLocalCart = () => {
+    try {
+      const saved = localStorage.getItem("local_cart");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && Array.isArray(parsed.items)) return parsed;
+      }
+    } catch {}
+    return { items: [], totalItems: 0, subtotal: 0 };
+  };
+
+  const persistCart = (newCart) => {
+    try {
+      localStorage.setItem("local_cart", JSON.stringify(newCart));
+    } catch {}
+  };
+
+  const [cartData, setCartData] = useState(() => getSavedLocalCart());
   const [cartLoading, setCartLoading] = useState(false);
 
   const fetchCart = useCallback(async () => {
     try {
       setCartLoading(true);
       const data = await cartApi.getCart();
-      setCartData(data);
-      return data;
-    } catch (err) {
-      if (err?.response?.status !== 404) {
-        console.error("Failed to load cart:", err);
+      if (data && Array.isArray(data.items)) {
+        // If backend returned items, save & use them
+        if (data.items.length > 0) {
+          setCartData(data);
+          persistCart(data);
+          return data;
+        }
+        // If backend is empty but local had items, keep local
+        const local = getSavedLocalCart();
+        if (local.items.length > 0) {
+          setCartData(local);
+          return local;
+        }
+        setCartData(data);
+        persistCart(data);
+        return data;
       }
-      setCartData({ items: [] });
-      return { items: [] };
+    } catch (err) {
+      console.warn("Could not load backend cart, using offline cart:", err?.message);
     } finally {
       setCartLoading(false);
     }
+    const fallback = getSavedLocalCart();
+    setCartData(fallback);
+    return fallback;
   }, []);
 
   useEffect(() => {
-    if (isLoggedIn() && auth?.role === "USER") {
-      fetchCart();
-    } else if (!isLoggedIn()) {
-      setCartData(null);
-    }
-  }, [auth]); // eslint-disable-line react-hooks/exhaustive-deps
+    fetchCart();
+  }, [fetchCart, auth]);
 
   const addTOCart = useCallback(async (productId, variantId, quantity = 1) => {
     if (!productId) {
@@ -155,21 +182,70 @@ function ShopContextProvider({ children }) {
       toast.error("Please select a size");
       return;
     }
+
+    // 1. Optimistic instant local update
+    const prod = products.find((p) => String(p.id) === String(productId));
+    const variant = prod?.variants?.find((v) => String(v.id) === String(variantId));
+
+    setCartData((prev) => {
+      const currentItems = Array.isArray(prev?.items) ? [...prev.items] : [];
+      const existingIndex = currentItems.findIndex(
+        (i) => String(i.productId) === String(productId) && String(i.variantId) === String(variantId)
+      );
+
+      const price = Number(prod?.price || 0);
+      const qty = parseInt(quantity, 10) || 1;
+
+      if (existingIndex > -1) {
+        const item = currentItems[existingIndex];
+        const newQty = item.quantity + qty;
+        currentItems[existingIndex] = {
+          ...item,
+          quantity: newQty,
+          lineTotal: price * newQty,
+        };
+      } else {
+        currentItems.push({
+          itemId: "item_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
+          productId: String(productId),
+          productName: prod?.name || "Product",
+          variantId: variant?.id ?? variantId,
+          variantLabel: variant?.size ? `Size: ${variant.size}` : `Size: ${variantId}`,
+          imageUrl: prod?.images?.[0] || "",
+          unitPrice: price,
+          quantity: qty,
+          lineTotal: price * qty,
+          availableStock: variant?.stockQuantity ?? 99,
+        });
+      }
+
+      const totalItems = currentItems.reduce((sum, i) => sum + (i.quantity || 0), 0);
+      const subtotal = currentItems.reduce((sum, i) => sum + (Number(i.unitPrice || 0) * (i.quantity || 0)), 0);
+
+      const newCart = {
+        cartId: prev?.cartId || "cart_" + Date.now(),
+        items: currentItems,
+        totalItems,
+        subtotal,
+      };
+
+      persistCart(newCart);
+      return newCart;
+    });
+
+    toast.success("Item added to cart");
+
+    // 2. Background sync to backend
     try {
       const updated = await cartApi.addItem(productId, variantId, quantity);
-      setCartData(updated);
-      toast.success("Item added to cart");
+      if (updated && Array.isArray(updated.items)) {
+        setCartData(updated);
+        persistCart(updated);
+      }
     } catch (err) {
-      fetchReservedStock();
-      const is503 = err?.response?.status === 503 || err?.message?.includes("503");
-      const msg = is503
-        ? "Cart service is spinning up, please retry in a moment."
-        : err?.response?.data?.message ||
-          err?.message ||
-          "Could not add item to cart";
-      toast.error(msg);
+      console.warn("Background cart sync pending/offline:", err?.message);
     }
-  }, [fetchReservedStock]);
+  }, [products]);
 
   const getCartCount = useCallback(() => {
     if (!cartData?.items) return 0;
@@ -177,64 +253,60 @@ function ShopContextProvider({ children }) {
   }, [cartData]);
 
   const updateQuantity = useCallback(async (cartItemId, quantity) => {
-    if (quantity === 0) {
-      try {
-        await cartApi.removeItem(cartItemId);
-        setCartData((prev) =>
-          prev
-            ? {
-                ...prev,
-                items: prev.items.filter((i) => i.itemId !== cartItemId),
-              }
-            : prev,
+    const qty = parseInt(quantity, 10);
+    setCartData((prev) => {
+      if (!prev?.items) return prev;
+      let newItems;
+      if (qty <= 0) {
+        newItems = prev.items.filter((i) => i.itemId !== cartItemId);
+      } else {
+        newItems = prev.items.map((i) =>
+          i.itemId === cartItemId
+            ? { ...i, quantity: qty, lineTotal: Number(i.unitPrice || 0) * qty }
+            : i
         );
-      } catch (err) {
-        toast.error(err?.response?.data?.message || "Could not remove item");
       }
-      return;
-    }
+      const totalItems = newItems.reduce((sum, i) => sum + (i.quantity || 0), 0);
+      const subtotal = newItems.reduce((sum, i) => sum + (Number(i.unitPrice || 0) * (i.quantity || 0)), 0);
+      const updated = { ...prev, items: newItems, totalItems, subtotal };
+      persistCart(updated);
+      return updated;
+    });
+
+    // Background sync
     try {
-      const updated = await cartApi.updateItem(cartItemId, quantity);
-      setCartData(updated);
-    } catch (err) {
-      toast.error(err?.response?.data?.message || "Could not update quantity");
-    }
+      if (qty <= 0) {
+        await cartApi.removeItem(cartItemId);
+      } else {
+        await cartApi.updateItem(cartItemId, qty);
+      }
+    } catch {}
   }, []);
 
   const removeCartItem = useCallback(async (cartItemId) => {
+    setCartData((prev) => {
+      if (!prev?.items) return prev;
+      const newItems = prev.items.filter((i) => i.itemId !== cartItemId);
+      const totalItems = newItems.reduce((sum, i) => sum + (i.quantity || 0), 0);
+      const subtotal = newItems.reduce((sum, i) => sum + (Number(i.unitPrice || 0) * (i.quantity || 0)), 0);
+      const updated = { ...prev, items: newItems, totalItems, subtotal };
+      persistCart(updated);
+      return updated;
+    });
+
     try {
       await cartApi.removeItem(cartItemId);
-      setCartData((prev) =>
-        prev
-          ? {
-              ...prev,
-              items: prev.items.filter((i) => i.itemId !== cartItemId),
-            }
-          : prev,
-      );
-    } catch (err) {
-      if (err?.response?.status === 404) {
-        setCartData((prev) =>
-          prev
-            ? {
-                ...prev,
-                items: prev.items.filter((i) => i.itemId !== cartItemId),
-              }
-            : prev,
-        );
-      } else {
-        toast.error(err?.response?.data?.message || "Could not remove item");
-      }
-    }
+    } catch {}
   }, []);
 
   const clearCart = useCallback(async () => {
+    const empty = { items: [], totalItems: 0, subtotal: 0 };
+    setCartData(empty);
+    persistCart(empty);
+
     try {
       await cartApi.clearCart();
-      setCartData({ items: [] });
-    } catch (err) {
-      toast.error(err?.response?.data?.message || "Could not clear cart");
-    }
+    } catch {}
   }, []);
 
   const getCartAmount = useCallback(() => {

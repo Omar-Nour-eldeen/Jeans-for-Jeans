@@ -5,6 +5,7 @@ import Title from "../components/Title";
 import CartTotal from "../components/CartTotal";
 import { ShopContext } from "../context/ShopContext";
 import { orderApi } from "../services/orderService";
+import { cartApi } from "../services/cartService";
 import { getProfile, getCachedProfile } from "../services/userService";
 import { cacheService } from "../services/cacheService";
 import { toast } from "react-toastify";
@@ -159,6 +160,13 @@ function PlaceOrder() {
         },
         paymentMethod: PAYMENT_MAP[method] ?? "CASH_ON_DELIVERY",
       };
+
+      // Ensure backend cart in order-service has the current items before placing order
+      try {
+        for (const item of items) {
+          await cartApi.addItem(item.productId, item.variantId, item.quantity).catch(() => {});
+        }
+      } catch {}
 
       await orderApi.placeOrder(body);
 

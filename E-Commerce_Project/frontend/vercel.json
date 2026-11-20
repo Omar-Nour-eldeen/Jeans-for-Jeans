@@ -1,6 +1,9 @@
-
 {
   "rewrites": [
+    {
+      "source": "/api/order-proxy/:path*",
+      "destination": "https://jeans-order-cbd8c.containers.snapdeploy.app/:path*"
+    },
     {
       "source": "/(.*)",
       "destination": "/"
