@@ -6,19 +6,20 @@ const BASE_URL = import.meta.env.PROD
   : "/api";
 
 export const register = async ({ name, email, password }) => {
-  const { data } = await axios.post(`${BASE_URL}/auth/register`, {
-    name,
-    email,
-    password,
-  });
+  const { data } = await api.post(
+    "/auth/register",
+    { name, email, password },
+    { _skipAuthRefresh: true }
+  );
   return data;
 };
 
 export const login = async ({ email, password }) => {
-  const { data } = await axios.post(`${BASE_URL}/auth/login`, {
-    email,
-    password,
-  });
+  const { data } = await api.post(
+    "/auth/login",
+    { email, password },
+    { _skipAuthRefresh: true }
+  );
   localStorage.setItem("auth", JSON.stringify(data));
   return data;
 };
@@ -97,7 +98,11 @@ export const resendVerification = async (email) => {
 };
 
 export const loginWithGoogle = async (idToken) => {
-  const { data } = await axios.post(`${BASE_URL}/auth/google`, { idToken });
+  const { data } = await api.post(
+    "/auth/google",
+    { idToken },
+    { _skipAuthRefresh: true }
+  );
   localStorage.setItem("auth", JSON.stringify(data));
   return data;
 };

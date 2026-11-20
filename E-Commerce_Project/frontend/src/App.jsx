@@ -19,11 +19,15 @@ import EmployeePage from "./pages/employee/EmployeePage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Profile from "./pages/Profile";
 import Unauthorized from "./pages/Unauthorized";
+import ServerWakeupModal from "./components/ServerWakeupModal";
+import ServerHeartbeat from "./components/ServerHeartbeat";
 
 function App() {
   return (
     <>
       <ToastContainer position="top-right" autoClose={3000} />
+      <ServerWakeupModal />
+      <ServerHeartbeat />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />

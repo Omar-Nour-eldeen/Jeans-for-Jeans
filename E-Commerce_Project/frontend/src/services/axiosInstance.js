@@ -6,6 +6,7 @@ const BASE_URL = import.meta.env.PROD
 
 const api = axios.create({
   baseURL: BASE_URL,
+  timeout: 60000, // 60s timeout to allow cold-starting containers to boot
   headers: { "Content-Type": "application/json" },
 });
 
@@ -19,6 +20,7 @@ api.interceptors.request.use((config) => {
 
 let isRefreshing = false;
 let failedQueue = [];
+let isColdStartActive = false;
 
 const processQueue = (error, token = null) => {
   failedQueue.forEach((p) => (error ? p.reject(error) : p.resolve(token)));
@@ -26,12 +28,68 @@ const processQueue = (error, token = null) => {
 };
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // If a request succeeds after we showed the cold-start modal, dismiss it gracefully
+    if (isColdStartActive) {
+      isColdStartActive = false;
+      window.dispatchEvent(
+        new CustomEvent("server:cold-start", {
+          detail: { isWarmingUp: false, success: true },
+        })
+      );
+    }
+    return response;
+  },
   async (error) => {
     const original = error.config;
+    if (!original) return Promise.reject(error);
 
-    // Auto-refresh token on 403 (permissions may have just been updated)
-    if (error.response?.status === 403 && !original._retryPerm) {
+    // ── 1. Cold Start / Server Sleep Detection & Auto-Retry ──
+    const isColdStart =
+      !error.response || // Network Error / container sleeping / connection dropped
+      error.code === "ECONNABORTED" || // Request Timeout
+      error.response?.status === 502 ||
+      error.response?.status === 503 ||
+      error.response?.status === 504;
+
+    const MAX_RETRIES = 12; // 12 retries * 4s = ~48s (typical Spring Boot container wake-up time)
+
+    if (
+      isColdStart &&
+      !original._skipColdStartNotification &&
+      (original._coldStartRetries || 0) < MAX_RETRIES
+    ) {
+      original._coldStartRetries = (original._coldStartRetries || 0) + 1;
+      isColdStartActive = true;
+
+      // Notify the UI to show the ServerWakeupModal
+      window.dispatchEvent(
+        new CustomEvent("server:cold-start", {
+          detail: {
+            isWarmingUp: true,
+            retries: original._coldStartRetries,
+            maxRetries: MAX_RETRIES,
+          },
+        })
+      );
+
+      // Wait 4 seconds between retry attempts
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+      return api(original);
+    }
+
+    // Dismiss modal if we hit maximum retries so the user isn't stuck forever
+    if (isColdStartActive && (original._coldStartRetries || 0) >= MAX_RETRIES) {
+      isColdStartActive = false;
+      window.dispatchEvent(
+        new CustomEvent("server:cold-start", {
+          detail: { isWarmingUp: false, success: false },
+        })
+      );
+    }
+
+    // ── 2. Auto-refresh token on 403 (permissions updated) ──
+    if (error.response?.status === 403 && !original._retryPerm && !original._skipAuthRefresh) {
       original._retryPerm = true;
       const auth = JSON.parse(localStorage.getItem("auth") || "null");
       if (auth?.refreshToken) {
@@ -50,7 +108,8 @@ api.interceptors.response.use(
       }
     }
 
-    if (error.response?.status === 401 && !original._retry) {
+    // ── 3. Token refresh on 401 Unauthorized ──
+    if (error.response?.status === 401 && !original._retry && !original._skipAuthRefresh) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
