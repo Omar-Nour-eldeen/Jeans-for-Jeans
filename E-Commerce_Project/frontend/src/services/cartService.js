@@ -10,9 +10,23 @@ const getUserId = () => {
   }
 };
 
+let activePrefix = null;
+
+const executeCall = async (method, path, data, config) => {
+  if (method === "get") return (await api.get(path, config)).data;
+  if (method === "post") return (await api.post(path, data, config)).data;
+  if (method === "put") return (await api.put(path, data, config)).data;
+  if (method === "delete") return (await api.delete(path, config)).data;
+};
+
+const isFallbackEligible = (err) => {
+  const status = err?.response?.status;
+  return status === 404 || status === 502 || status === 503 || status === 504;
+};
+
 /**
- * Executes request with automatic fallback between /cart and /orders/cart
- * to guarantee compatibility with all Gateway route configurations.
+ * Executes request with automatic adaptive fallback between /cart and /orders/cart
+ * to guarantee 100% compatibility across all Gateway and Order-service deployments.
  */
 const requestWithFallback = async (method, primaryPath, fallbackPath, data = null, extraConfig = {}) => {
   const userId = getUserId();
@@ -22,40 +36,23 @@ const requestWithFallback = async (method, primaryPath, fallbackPath, data = nul
   };
   const config = { ...extraConfig, headers };
 
+  const firstPath = activePrefix === "/orders/cart" ? fallbackPath : primaryPath;
+  const secondPath = firstPath === primaryPath ? fallbackPath : primaryPath;
+
   try {
-    if (method === "get") {
-      const res = await api.get(primaryPath, config);
-      return res.data;
+    const res = await executeCall(method, firstPath, data, config);
+    if (!activePrefix) {
+      activePrefix = firstPath.startsWith("/orders/cart") ? "/orders/cart" : "/cart";
     }
-    if (method === "post") {
-      const res = await api.post(primaryPath, data, config);
-      return res.data;
-    }
-    if (method === "put") {
-      const res = await api.put(primaryPath, data, config);
-      return res.data;
-    }
-    if (method === "delete") {
-      const res = await api.delete(primaryPath, config);
-      return res.data;
-    }
+    return res;
   } catch (err) {
-    if (err?.response?.status === 404 && fallbackPath) {
-      if (method === "get") {
-        const res = await api.get(fallbackPath, config);
-        return res.data;
-      }
-      if (method === "post") {
-        const res = await api.post(fallbackPath, data, config);
-        return res.data;
-      }
-      if (method === "put") {
-        const res = await api.put(fallbackPath, data, config);
-        return res.data;
-      }
-      if (method === "delete") {
-        const res = await api.delete(fallbackPath, config);
-        return res.data;
+    if (secondPath && isFallbackEligible(err)) {
+      try {
+        const res = await executeCall(method, secondPath, data, config);
+        activePrefix = secondPath.startsWith("/orders/cart") ? "/orders/cart" : "/cart";
+        return res;
+      } catch (fallbackErr) {
+        throw fallbackErr;
       }
     }
     throw err;

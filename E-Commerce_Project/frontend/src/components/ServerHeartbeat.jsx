@@ -2,9 +2,56 @@ import { useEffect, useRef } from "react";
 import api from "../services/axiosInstance";
 
 /**
+ * List of known SnapDeploy container endpoints.
+ * Can be extended via VITE_CONTAINER_URLS environment variable (comma-separated)
+ * or via localStorage.setItem("snapdeploy_container_urls", JSON.stringify([...]))
+ */
+const DEFAULT_CONTAINERS = [
+  "https://jeans-gateway-f7863.containers.snapdeploy.app",
+  "https://jeans-auth-cbd8c.containers.snapdeploy.app",
+  "https://jeans-user-abb55.containers.snapdeploy.app",
+];
+
+const getContainerList = () => {
+  try {
+    const saved = localStorage.getItem("snapdeploy_container_urls");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return Array.from(new Set([...DEFAULT_CONTAINERS, ...parsed]));
+      }
+    }
+  } catch {}
+
+  const custom = import.meta.env.VITE_CONTAINER_URLS;
+  if (custom) {
+    const list = custom.split(",").map((s) => s.trim()).filter(Boolean);
+    return Array.from(new Set([...DEFAULT_CONTAINERS, ...list]));
+  }
+  return DEFAULT_CONTAINERS;
+};
+
+/**
+ * Sends a lightweight HTTP ping directly to each container's SnapDeploy public URL.
+ * Using mode: 'no-cors' triggers SnapDeploy's ingress to wake up the sleeping container
+ * without any CORS restrictions or blocking the browser.
+ */
+export const wakeUpAllContainers = () => {
+  const urls = getContainerList();
+  urls.forEach((url) => {
+    try {
+      fetch(`${url}/health`, { mode: "no-cors", cache: "no-store" }).catch(() => {});
+      fetch(`${url}/`, { mode: "no-cors", cache: "no-store" }).catch(() => {});
+    } catch {}
+  });
+};
+
+// Fire immediately on module load so containers start booting before components even render
+wakeUpAllContainers();
+
+/**
  * Keeps the backend services awake as long as ANY user has the frontend open in their browser.
- * Pings every 3 minutes (180s) which is well before platforms like SnapDeploy/Render/Railway sleep (usually 10-15m).
- * When the browser tab is closed, the pings stop completely, allowing the server to sleep naturally after inactivity.
+ * Pings every 3 minutes (180s) which is well before platforms like SnapDeploy sleep (usually 10-15m).
  */
 const ServerHeartbeat = () => {
   const lastPingRef = useRef(Date.now());
@@ -14,34 +61,28 @@ const ServerHeartbeat = () => {
 
     const sendHeartbeat = async () => {
       lastPingRef.current = Date.now();
+
+      // 1. Ping each SnapDeploy container directly to wake it up / keep it awake
+      wakeUpAllContainers();
+
+      // 2. Ping gateway /orders/reserved-stock to verify gateway routing
       try {
-        // Ping gateway health check (lightweight, doesn't hit DB)
-        await api.get("/health", {
-          _skipColdStartNotification: true,
-          _skipAuthRefresh: true,
+        await api.get("/orders/reserved-stock", {
+          _skipRetry: true,
           timeout: 10000,
         });
       } catch {
-        // Fallback: ping root /
-        try {
-          await api.get("/", {
-            _skipColdStartNotification: true,
-            _skipAuthRefresh: true,
-            timeout: 10000,
-          });
-        } catch {
-          // Ignore heartbeat failures quietly
-        }
+        // Ignore heartbeat failures quietly
       }
     };
 
-    // Initial heartbeat after 10 seconds of app load
-    const initialTimer = setTimeout(sendHeartbeat, 10000);
+    // Wake up all containers immediately on mount
+    sendHeartbeat();
 
     // Periodic heartbeat every 3 minutes
     const interval = setInterval(sendHeartbeat, PING_INTERVAL_MS);
 
-    // Ping immediately when user returns to the tab if it's been idle > 3 minutes
+    // Ping immediately when user returns to tab if idle > 3 minutes
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         const timeSinceLastPing = Date.now() - lastPingRef.current;
@@ -54,13 +95,12 @@ const ServerHeartbeat = () => {
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      clearTimeout(initialTimer);
       clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
-  return null; // Invisible component
+  return null;
 };
 
 export default ServerHeartbeat;

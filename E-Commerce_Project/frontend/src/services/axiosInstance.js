@@ -32,7 +32,7 @@ api.interceptors.response.use(
     const original = error.config;
     if (!original) return Promise.reject(error);
 
-    // ── 1. Isolated Auto-Retry for 502/503/504 Cold Starts (Max 2 quick retries) ──
+    // ── 1. Isolated Auto-Retry for 502/503/504 Cold Starts ──
     const isColdStart =
       !error.response ||
       error.code === "ECONNABORTED" ||
@@ -45,7 +45,7 @@ api.interceptors.response.use(
       window.dispatchEvent(new CustomEvent("server:cold-start-detected"));
     }
 
-    const MAX_RETRIES = 2;
+    const MAX_RETRIES = 8; // 8 retries * 3.5s = ~28s (gives the booting container time to respond!)
 
     if (
       isColdStart &&
@@ -53,8 +53,7 @@ api.interceptors.response.use(
       (original._retryCount || 0) < MAX_RETRIES
     ) {
       original._retryCount = (original._retryCount || 0) + 1;
-      // Quick 2s wait before retry (no UI block, completely non-intrusive)
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 3500));
       return api(original);
     }
 

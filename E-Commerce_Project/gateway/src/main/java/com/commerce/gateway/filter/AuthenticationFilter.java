@@ -34,6 +34,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         private List<RouteRule> routeRules;
 
         private static final Set<String> PUBLIC_PATHS = Set.of(
+                        "/health",
                         "/auth/login",
                         "/auth/register",
                         "/auth/refresh",
@@ -158,6 +159,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         }
 
         private boolean isPublicPath(String path) {
+                if ("/".equals(path)) return true;
                 return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
         }
 
