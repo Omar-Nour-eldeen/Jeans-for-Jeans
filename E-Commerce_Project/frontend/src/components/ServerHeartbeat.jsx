@@ -35,14 +35,21 @@ const getContainerList = () => {
   return DEFAULT_CONTAINERS;
 };
 
+const extractSubdomain = (url) => {
+  try {
+    const hostname = new URL(url).hostname;
+    return hostname.split(".")[0];
+  } catch {
+    return null;
+  }
+};
+
 let lastWakeupTime = 0;
 const WAKEUP_THROTTLE_MS = 60000; // Limit wake-up bursts to at most once per 60 seconds
 
 /**
- * Sends a lightweight HTTP ping directly to each container's SnapDeploy public URL.
- * Using mode: 'no-cors' triggers SnapDeploy's ingress to wake up the sleeping container
- * without any CORS restrictions or blocking the browser.
- * Throttled to respect SnapDeploy's Cloudflare rate limits (< 100 req/min).
+ * Directly wakes up sleeping containers by calling SnapDeploy's official public Wake API
+ * (POST https://snapdeploy.dev/api/public/wake/{subdomain}) and sending ingress keep-alives.
  */
 export const wakeUpAllContainers = () => {
   const now = Date.now();
@@ -51,6 +58,16 @@ export const wakeUpAllContainers = () => {
 
   const urls = getContainerList();
   urls.forEach((url) => {
+    const subdomain = extractSubdomain(url);
+    if (subdomain) {
+      try {
+        fetch(`https://snapdeploy.dev/api/public/wake/${subdomain}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        }).catch(() => {});
+      } catch {}
+    }
+
     try {
       fetch(`${url}/`, { mode: "no-cors", cache: "no-store" }).catch(() => {});
     } catch {}
