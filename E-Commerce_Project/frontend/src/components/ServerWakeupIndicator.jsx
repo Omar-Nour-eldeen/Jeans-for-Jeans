@@ -24,8 +24,11 @@ export default function ServerWakeupIndicator() {
       isCheckingRef.current = true;
 
       try {
-        const res = await axios.get(`${BASE_URL}/health`, { timeout: 4000 });
-        if (res.status === 200) {
+        const res = await axios.get(`${BASE_URL}/orders/reserved-stock`, {
+          timeout: 4000,
+          validateStatus: (s) => s < 500,
+        });
+        if (res.status < 500) {
           if (isWarmingUp) {
             setIsReady(true);
             setTimeout(() => {
@@ -75,8 +78,11 @@ export default function ServerWakeupIndicator() {
 
     const poller = setInterval(async () => {
       try {
-        const res = await axios.get(`${BASE_URL}/health`, { timeout: 4000 });
-        if (res.status === 200) {
+        const res = await axios.get(`${BASE_URL}/orders/reserved-stock`, {
+          timeout: 4000,
+          validateStatus: (s) => s < 500,
+        });
+        if (res.status < 500) {
           setIsReady(true);
           setTimeout(() => {
             setIsWarmingUp(false);
