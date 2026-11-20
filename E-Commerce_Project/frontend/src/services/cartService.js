@@ -2,67 +2,116 @@ import api from "./axiosInstance";
 
 // Helper: get userId from stored auth
 const getUserId = () => {
-  const auth = JSON.parse(localStorage.getItem("auth") || "null");
-  return auth?.user?.id || auth?.userId || null;
+  try {
+    const auth = JSON.parse(localStorage.getItem("auth") || "null");
+    return auth?.user?.id || auth?.userId || null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Executes request with automatic fallback between /cart and /orders/cart
+ * to guarantee compatibility with all Gateway route configurations.
+ */
+const requestWithFallback = async (method, primaryPath, fallbackPath, data = null, extraConfig = {}) => {
+  const userId = getUserId();
+  const headers = {
+    ...(userId ? { "User-Id": userId } : {}),
+    ...(extraConfig.headers || {}),
+  };
+  const config = { ...extraConfig, headers };
+
+  try {
+    if (method === "get") {
+      const res = await api.get(primaryPath, config);
+      return res.data;
+    }
+    if (method === "post") {
+      const res = await api.post(primaryPath, data, config);
+      return res.data;
+    }
+    if (method === "put") {
+      const res = await api.put(primaryPath, data, config);
+      return res.data;
+    }
+    if (method === "delete") {
+      const res = await api.delete(primaryPath, config);
+      return res.data;
+    }
+  } catch (err) {
+    if (err?.response?.status === 404 && fallbackPath) {
+      if (method === "get") {
+        const res = await api.get(fallbackPath, config);
+        return res.data;
+      }
+      if (method === "post") {
+        const res = await api.post(fallbackPath, data, config);
+        return res.data;
+      }
+      if (method === "put") {
+        const res = await api.put(fallbackPath, data, config);
+        return res.data;
+      }
+      if (method === "delete") {
+        const res = await api.delete(fallbackPath, config);
+        return res.data;
+      }
+    }
+    throw err;
+  }
 };
 
 export const cartApi = {
   /** GET /cart */
   getCart: () =>
-    api
-      .get("/cart", { headers: { "User-Id": getUserId() }, _skipRetry: true })
-      .then((r) => r.data.data),
+    requestWithFallback("get", "/cart", "/orders/cart", null, { _skipRetry: true })
+      .then((body) => body?.data ?? body),
 
   /** GET /cart/count */
   getCartCount: () =>
-    api
-      .get("/cart/count", { headers: { "User-Id": getUserId() }, _skipRetry: true })
-      .then((r) => r.data.data?.count ?? 0),
+    requestWithFallback("get", "/cart/count", "/orders/cart/count", null, { _skipRetry: true })
+      .then((body) => body?.data?.count ?? 0),
 
   /**
    * POST /cart/items
    * body: { productId, variantId, quantity }
    */
   addItem: (productId, variantId, quantity = 1) =>
-    api
-      .post(
-        "/cart/items",
-        {
-          productId,
-          variantId,
-          quantity: parseInt(quantity, 10),
-        },
-        { headers: { "User-Id": getUserId() } },
-      )
-      .then((r) => r.data.data),
+    requestWithFallback(
+      "post",
+      "/cart/items",
+      "/orders/cart/items",
+      {
+        productId: String(productId),
+        variantId: String(variantId),
+        quantity: parseInt(quantity, 10),
+      }
+    ).then((body) => body?.data ?? body),
 
   /**
    * PUT /cart/items/{itemId}
    * body: { quantity }
-   * FIX: returns updated cart from response body
    */
   updateItem: (itemId, quantity) =>
-    api
-      .put(
-        `/cart/items/${itemId}`,
-        { quantity: parseInt(quantity, 10) },
-        { headers: { "User-Id": getUserId() } },
-      )
-      .then((r) => r.data.data),
+    requestWithFallback(
+      "put",
+      `/cart/items/${itemId}`,
+      `/orders/cart/items/${itemId}`,
+      { quantity: parseInt(quantity, 10) }
+    ).then((body) => body?.data ?? body),
 
   /**
    * DELETE /cart/items/{itemId}
-   * FIX: returns updated cart from response body so ShopContext
-   *      can setCartData(updated) instead of manually filtering.
-   *      Falls back gracefully if backend returns no body.
    */
   removeItem: (itemId) =>
-    api
-      .delete(`/cart/items/${itemId}`, {
-        headers: { "User-Id": getUserId() },
-      })
-      .then((r) => r.data?.data ?? null),
+    requestWithFallback(
+      "delete",
+      `/cart/items/${itemId}`,
+      `/orders/cart/items/${itemId}`
+    ).then((body) => body?.data ?? null),
 
   /** DELETE /cart */
-  clearCart: () => api.delete("/cart", { headers: { "User-Id": getUserId() } }),
+  clearCart: () =>
+    requestWithFallback("delete", "/cart", "/orders/cart"),
 };

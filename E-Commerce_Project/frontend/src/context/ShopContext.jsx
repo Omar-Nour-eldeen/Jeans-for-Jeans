@@ -235,11 +235,10 @@ function ShopContextProvider({ children }) {
   }, [cartData]);
 
   // ── Categories with Cache ────────────────────────────────────────────────
-  const refreshCategories = useCallback(async ({ force = false } = {}) => {
+  const refreshCategories = useCallback(async () => {
     const cached = cacheService.get(CATEGORIES_CACHE_KEY, CATEGORIES_TTL_MS);
-    if (!force && cached && !cached.isExpired && Array.isArray(cached.data) && cached.data.length > 0) {
+    if (cached?.data?.length > 0) {
       setCategories(cached.data);
-      return cached.data;
     }
 
     try {
@@ -258,26 +257,25 @@ function ShopContextProvider({ children }) {
   }, []);
 
   // ── Products with Cache & Stale-While-Revalidate ──────────────────────────
-  const refreshProducts = useCallback(async ({ force = false } = {}) => {
+  const refreshProducts = useCallback(async () => {
     const cached = cacheService.get(PRODUCTS_CACHE_KEY, PRODUCTS_TTL_MS);
 
-    // If fresh cache exists and force is false, populate state immediately with 0ms network
-    if (!force && cached && !cached.isExpired && Array.isArray(cached.data) && cached.data.length > 0) {
+    // Instant initial display from cache
+    if (cached?.data?.length > 0 && products.length === 0) {
       setProducts(cached.data);
-      return cached.data;
     }
 
     try {
-      // Only show full loading if we do not already have products displayed
       if (!cached?.data?.length && products.length === 0) {
         setProductsLoading(true);
       }
       setProductsError(null);
 
+      // Always call the backend services to wake them up and get fresh data
       const [data] = await Promise.all([
         productApi.getAll(),
         fetchReservedStock(),
-        refreshCategories({ force }),
+        refreshCategories(),
       ]);
 
       const list = Array.isArray(data) ? data : [];

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { getProfile } from "../services/userService";
 import { useContext } from "react";
@@ -6,8 +6,8 @@ import { ShopContext } from "../context/ShopContext";
 
 /**
  * DataPrefetcher:
- * Completely isolated, low-priority background prefetching.
- * Never throws errors, never blocks the UI, and never interferes with other services.
+ * Automatically calls all microservices on frontend load to wake them up
+ * and fetch fresh data into the application.
  */
 export default function DataPrefetcher() {
   const { auth, isLoggedIn } = useAuth();
@@ -16,50 +16,26 @@ export default function DataPrefetcher() {
     refreshCategories,
     fetchCart,
     fetchReservedStock,
-    canLoadProducts,
   } = useContext(ShopContext) || {};
 
-  const hasPrefetchedRef = useRef(false);
-
   useEffect(() => {
-    if (!isLoggedIn()) {
-      hasPrefetchedRef.current = false;
-      return;
-    }
-
-    if (hasPrefetchedRef.current) return;
-    hasPrefetchedRef.current = true;
-
-    // Run parallel background prefetching completely isolated
-    const prefetchTimer = setTimeout(() => {
-      // 1. Prefetch user profile quietly
-      getProfile().catch(() => {});
-
-      // 2. Prefetch products & categories quietly
-      if (canLoadProducts && canLoadProducts()) {
-        refreshProducts?.().catch(() => {});
-        refreshCategories?.().catch(() => {});
-      }
-
-      // 3. Prefetch Cart quietly
-      if (auth?.role === "USER") {
-        fetchCart?.().catch(() => {});
-      }
-
-      // 4. Prefetch reserved stock quietly
+    // 1. Immediately call Public Services on app startup
+    const timer = setTimeout(() => {
+      refreshProducts?.().catch(() => {});
+      refreshCategories?.().catch(() => {});
       fetchReservedStock?.().catch(() => {});
-    }, 300);
 
-    return () => clearTimeout(prefetchTimer);
-  }, [
-    auth,
-    isLoggedIn,
-    canLoadProducts,
-    refreshProducts,
-    refreshCategories,
-    fetchCart,
-    fetchReservedStock,
-  ]);
+      // 2. Call User Services if authenticated
+      if (isLoggedIn?.()) {
+        getProfile().catch(() => {});
+        if (auth?.role === "USER") {
+          fetchCart?.().catch(() => {});
+        }
+      }
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [auth]); // Runs on startup and on auth change
 
   return null;
 }

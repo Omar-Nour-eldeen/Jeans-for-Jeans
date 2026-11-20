@@ -13,17 +13,13 @@ const getUserId = () => getAuth()?.user?.id ?? "";
 const getUserEmail = () => getAuth()?.user?.email ?? "";
 
 const PROFILE_CACHE_KEY = "user_profile";
-const PROFILE_TTL_MS = 5 * 60 * 1000; // 5 minutes fresh cache
+const PROFILE_TTL_MS = 5 * 60 * 1000;
 
-/**
- * Synchronously retrieves cached profile if available for 0ms initial render.
- */
 export const getCachedProfile = () => {
   const cached = cacheService.get(PROFILE_CACHE_KEY, PROFILE_TTL_MS * 2);
   if (cached?.data) return cached.data;
   try {
-    const legacy = JSON.parse(localStorage.getItem("user_profile") || "null");
-    return legacy;
+    return JSON.parse(localStorage.getItem("user_profile") || "null");
   } catch {
     return null;
   }
@@ -32,17 +28,13 @@ export const getCachedProfile = () => {
 let inFlightProfilePromise = null;
 
 /**
- * Gets user profile.
- * - Cache-first: if cached profile is fresh and force is false, returns cached without network request.
- * - Deduplicates concurrent in-flight requests so multiple components mounting simultaneously only trigger 1 network call.
- * - Stale-while-revalidate fallback: on error, returns existing cached profile.
+ * Gets user profile:
+ * - Always calls backend in the background so services stay warm and live data updates.
+ * - Deduplicates concurrent calls.
+ * - Falls back to cached profile if network fails.
  */
-export const getProfile = async ({ force = false, maxAgeMs = PROFILE_TTL_MS } = {}) => {
-  const cached = cacheService.get(PROFILE_CACHE_KEY, maxAgeMs);
-
-  if (!force && cached && !cached.isExpired && cached.data) {
-    return cached.data;
-  }
+export const getProfile = async () => {
+  const cached = getCachedProfile();
 
   if (inFlightProfilePromise) {
     return inFlightProfilePromise;
@@ -65,9 +57,8 @@ export const getProfile = async ({ force = false, maxAgeMs = PROFILE_TTL_MS } = 
       }
       return profile;
     } catch (err) {
-      if (cached?.data) {
-        console.warn("[userService] Backend error; serving cached profile as fallback:", err?.message);
-        return cached.data;
+      if (cached) {
+        return cached;
       }
       throw err;
     } finally {

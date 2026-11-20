@@ -16,7 +16,7 @@ import com.order.order.DTOs.Response.CartResponse;
 import com.order.order.interfaces.CartService;
 
 @RestController
-@RequestMapping("/cart")
+@RequestMapping({"/cart", "/orders/cart"})
 @RequiredArgsConstructor
 public class CartController {
 
