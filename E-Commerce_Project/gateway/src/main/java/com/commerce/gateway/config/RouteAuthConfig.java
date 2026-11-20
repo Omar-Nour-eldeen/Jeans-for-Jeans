@@ -93,9 +93,11 @@ public class RouteAuthConfig {
 
                                 RouteRule.forMethod("/auth/refresh", HttpMethod.POST, "USER", "EMPLOYEE"),
 
+                                RouteRule.forRoles("/orders", "USER", "EMPLOYEE"),
                                 RouteRule.forRoles("/orders/**", "USER", "EMPLOYEE"),
                                 RouteRule.forRoles("/payments/**", "USER", "EMPLOYEE"),
                                 RouteRule.forRoles("/auth/**", "USER", "EMPLOYEE"),
+                                RouteRule.forRoles("/cart", "USER", "EMPLOYEE"),
                                 RouteRule.forRoles("/cart/**", "USER", "EMPLOYEE"),
                                 RouteRule.forRoles("/users/**", "USER", "EMPLOYEE", "ADMIN"),
                                 RouteRule.adminOnly("/admin/users/**"),
