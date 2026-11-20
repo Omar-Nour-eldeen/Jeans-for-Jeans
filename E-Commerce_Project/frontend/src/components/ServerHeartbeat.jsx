@@ -8,8 +8,12 @@ import api from "../services/axiosInstance";
  */
 const DEFAULT_CONTAINERS = [
   "https://jeans-gateway-f7863.containers.snapdeploy.app",
+  "https://jeans-eureka-cbd8c.containers.snapdeploy.app",
   "https://jeans-auth-cbd8c.containers.snapdeploy.app",
   "https://jeans-user-abb55.containers.snapdeploy.app",
+  "https://jeans-product-abb55.containers.snapdeploy.app",
+  "https://jeans-order-cbd8c.containers.snapdeploy.app",
+  "https://jeans-cart-cbd8c.containers.snapdeploy.app",
 ];
 
 const getContainerList = () => {
