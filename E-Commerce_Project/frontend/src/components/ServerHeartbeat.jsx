@@ -49,7 +49,7 @@ const WAKEUP_THROTTLE_MS = 60000; // Limit wake-up bursts to at most once per 60
 
 /**
  * Directly wakes up sleeping containers by calling SnapDeploy's official public Wake API
- * (POST https://snapdeploy.dev/api/public/wake/{subdomain}) and sending ingress keep-alives.
+ * (POST https://snapdeploy.dev/api/public/wake/{subdomain}).
  */
 export const wakeUpAllContainers = () => {
   const now = Date.now();
@@ -57,6 +57,8 @@ export const wakeUpAllContainers = () => {
   lastWakeupTime = now;
 
   const urls = getContainerList();
+  console.log(`[SnapDeploy] Waking up ${urls.length} containers...`);
+
   urls.forEach((url) => {
     const subdomain = extractSubdomain(url);
     if (subdomain) {
@@ -64,13 +66,14 @@ export const wakeUpAllContainers = () => {
         fetch(`https://snapdeploy.dev/api/public/wake/${subdomain}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-        }).catch(() => {});
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            console.log(`[SnapDeploy] ${subdomain}:`, data?.status || data?.message || "OK");
+          })
+          .catch(() => {});
       } catch {}
     }
-
-    try {
-      fetch(`${url}/`, { mode: "no-cors", cache: "no-store" }).catch(() => {});
-    } catch {}
   });
 };
 
