@@ -27,19 +27,25 @@ export const login = async ({ email, password }) => {
 export const logout = async () => {
   const auth = JSON.parse(localStorage.getItem("auth") || "null");
   if (auth?.refreshToken) {
-    await api.post("/auth/logout", { refreshToken: auth.refreshToken });
+    try {
+      await api.post("/auth/logout", { refreshToken: auth.refreshToken });
+    } catch {}
   }
   localStorage.removeItem("auth");
+  localStorage.removeItem("user_profile");
 };
 
 export const logoutAll = async () => {
   const auth = JSON.parse(localStorage.getItem("auth") || "null");
   if (auth?.user?.id) {
-    await api.post("/auth/logout-all", null, {
-      headers: { "User-Id": auth.user.id },
-    });
+    try {
+      await api.post("/auth/logout-all", null, {
+        headers: { "User-Id": auth.user.id },
+      });
+    } catch {}
   }
   localStorage.removeItem("auth");
+  localStorage.removeItem("user_profile");
 };
 
 let refreshPromise = null;

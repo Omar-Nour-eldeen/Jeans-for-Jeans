@@ -4,6 +4,7 @@ import Title from "../components/Title";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { orderApi } from "../services/orderService";
+import { cacheService } from "../services/cacheService";
 
 const STATUS_CONFIG = {
   PENDING: {
@@ -92,26 +93,31 @@ function describeError(err) {
 
 export default function Orders() {
   const { currency } = useContext(ShopContext);
-  const [orders, setOrders] = useState([]);
+  const cachedOrders = cacheService.get("user_orders", 2 * 60 * 1000);
+  const [orders, setOrders] = useState(() => cachedOrders?.data?.items || []);
   const [orderDetailsMap, setOrderDetailsMap] = useState({});
   const [expandedOrders, setExpandedOrders] = useState({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !cachedOrders?.data?.items?.length);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
+  const [totalPages, setTotalPages] = useState(() => cachedOrders?.data?.totalPages || 1);
 
   const loadOrders = async (p = 0) => {
-    setLoading(true);
+    if (!orders.length) setLoading(true);
     setError(null);
     try {
       const data = await orderApi.getMyOrders(p, 10);
       setOrders(data.items);
       setTotalPages(data.totalPages || 1);
       setPage(p);
+      if (p === 0) {
+        cacheService.set("user_orders", { items: data.items, totalPages: data.totalPages || 1 });
+      }
     } catch (err) {
       console.error("[Orders] FAILED", err);
-      setError(describeError(err));
-      setOrders([]);
+      if (!orders.length) {
+        setError(describeError(err));
+      }
     } finally {
       setLoading(false);
     }

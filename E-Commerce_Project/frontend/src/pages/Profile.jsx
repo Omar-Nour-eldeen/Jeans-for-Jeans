@@ -2,36 +2,39 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../context/AuthContext";
-import { getProfile, updateProfile } from "../services/userService";
+import { getProfile, updateProfile, getCachedProfile } from "../services/userService";
 import { uploadProfileImage } from "../services/supabaseClient";
 import { toast } from "react-toastify";
 
 function ProfilePage() {
     const navigate = useNavigate();
     const { auth } = useAuth();
+    const cached = getCachedProfile();
+    const isDirtyRef = useRef(false);
+
     const [saving, setSaving] = useState(false);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!cached);
     const [photoFile, setPhotoFile] = useState(null);
-    const [photoPreview, setPhotoPreview] = useState(null);
+    const [photoPreview, setPhotoPreview] = useState(cached?.photoUrl || null);
     const fileInputRef = useRef(null);
 
-    const [form, setForm] = useState({
-        firstName: "",
-        lastName: "",
-        phoneNumber: "",
-        street: "",
-        city: "",
-        country: "",
-        zipCode: "",
-    });
+    const [form, setForm] = useState(() => ({
+        firstName: cached?.firstName || "",
+        lastName: cached?.lastName || "",
+        phoneNumber: cached?.phoneNumber || "",
+        street: cached?.street || "",
+        city: cached?.city || "",
+        country: cached?.country || "",
+        zipCode: cached?.zipCode || "",
+    }));
 
     useEffect(() => {
         let isMounted = true;
         const loadUserProfile = async () => {
             try {
-                setLoading(true);
+                if (!cached) setLoading(true);
                 const data = await getProfile();
-                if (isMounted && data) {
+                if (isMounted && data && !isDirtyRef.current) {
                     setForm({
                         firstName: data.firstName || "",
                         lastName: data.lastName || "",
@@ -44,11 +47,9 @@ function ProfilePage() {
                     if (data.photoUrl) {
                         setPhotoPreview(data.photoUrl);
                     }
-                    localStorage.setItem("user_profile", JSON.stringify(data));
-                    window.dispatchEvent(new CustomEvent("profile:updated", { detail: data }));
                 }
             } catch (err) {
-                console.error("Could not load user profile:", err);
+                console.warn("Could not load user profile:", err);
             } finally {
                 if (isMounted) setLoading(false);
             }
@@ -56,14 +57,16 @@ function ProfilePage() {
 
         loadUserProfile();
         return () => { isMounted = false; };
-    }, []);
+    }, [cached]);
 
     const handleChange = (e) => {
+        isDirtyRef.current = true;
         const { name, value } = e.target;
         setForm((prev) => ({ ...prev, [name]: value }));
     };
 
     const handlePhotoChange = (e) => {
+        isDirtyRef.current = true;
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -129,6 +132,7 @@ function ProfilePage() {
             const updated = await updateProfile(payload);
 
             if (updated) {
+                isDirtyRef.current = false;
                 setForm({
                     firstName: updated.firstName || form.firstName,
                     lastName: updated.lastName || form.lastName,
@@ -142,8 +146,6 @@ function ProfilePage() {
                     setPhotoPreview(updated.photoUrl);
                 }
                 setPhotoFile(null);
-                localStorage.setItem("user_profile", JSON.stringify(updated));
-                window.dispatchEvent(new CustomEvent("profile:updated", { detail: updated }));
             }
 
             toast.success("Profile saved successfully!");
@@ -184,216 +186,221 @@ function ProfilePage() {
                 </button>
 
                 <div className="mb-10">
-                <h1 className="text-3xl font-semibold text-stone-900">My Profile</h1>
-                <p className="text-sm text-gray-400 mt-1">
-                    Update your personal details below.
-                </p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="flex flex-col gap-8">
-
-                {/* ── Photo avatar ─────────────────────────────────── */}
-                <div className="flex flex-col items-center gap-3">
-                    <div
-                        onClick={() => fileInputRef.current?.click()}
-                        className="relative w-24 h-24 rounded-full cursor-pointer group"
-                    >
-                        {/* Photo or initials */}
-                        {photoPreview ? (
-                            <img
-                                src={photoPreview}
-                                alt="Profile"
-                                className="w-24 h-24 rounded-full object-cover"
-                            />
-                        ) : (
-                            <div className="w-24 h-24 rounded-full bg-black text-white flex items-center justify-center text-2xl font-semibold select-none">
-                                {initials || "?"}
-                            </div>
-                        )}
-
-                        {/* Camera overlay on hover */}
-                        <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="w-7 h-7 text-white"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth={1.5}
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"
-                                />
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z"
-                                />
-                            </svg>
-                        </div>
-                    </div>
-
-                    <p className="text-xs text-gray-400">
-                        Click photo to change &nbsp;·&nbsp; JPG, PNG, WEBP · max 5 MB
+                    <h1 className="text-3xl font-semibold text-stone-900">My Profile</h1>
+                    <p className="text-sm text-gray-400 mt-1">
+                        Update your personal details below.
                     </p>
-
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePhotoChange}
-                        className="hidden"
-                    />
                 </div>
 
-                {/* ── Email — locked ─────────────────────────────────── */}
-                <div className="flex flex-col gap-1">
-                    <label className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
-                        Email Address
-                    </label>
-                    <input
-                        type="email"
-                        value={auth?.user?.email ?? ""}
-                        disabled
-                        className={`${inputBase} border-gray-200 text-gray-400 cursor-not-allowed`}
-                    />
-                </div>
-
-                {/* ── First Name ─────────────────────────────────────── */}
-                <div className="flex flex-col gap-1">
-                    <label className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
-                        First Name
-                    </label>
-                    <input
-                        type="text"
-                        name="firstName"
-                        value={form.firstName}
-                        onChange={handleChange}
-                        required
-                        placeholder="Enter your first name"
-                        maxLength={50}
-                        className={`${inputBase} border-gray-300 focus:border-black`}
-                    />
-                </div>
-
-                {/* ── Last Name ──────────────────────────────────────── */}
-                <div className="flex flex-col gap-1">
-                    <label className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
-                        Last Name
-                    </label>
-                    <input
-                        type="text"
-                        name="lastName"
-                        value={form.lastName}
-                        onChange={handleChange}
-                        required
-                        placeholder="Enter your last name"
-                        maxLength={50}
-                        className={`${inputBase} border-gray-300 focus:border-black`}
-                    />
-                </div>
-
-                {/* ── Phone ──────────────────────────────────────────── */}
-                <div className="flex flex-col gap-1">
-                    <label className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
-                        Phone Number
-                    </label>
-                    <input
-                        type="tel"
-                        name="phoneNumber"
-                        value={form.phoneNumber}
-                        onChange={handleChange}
-                        placeholder="+20 10x xxxx xxxx"
-                        maxLength={16}
-                        className={`${inputBase} border-gray-300 focus:border-black`}
-                    />
-                </div>
-
-                <hr className="border-gray-100" />
-
-                {/* ── Street ─────────────────────────────────────────── */}
-                <div className="flex flex-col gap-1">
-                    <label className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
-                        Street Address
-                    </label>
-                    <input
-                        type="text"
-                        name="street"
-                        value={form.street}
-                        onChange={handleChange}
-                        placeholder="123 Nile Corniche St."
-                        maxLength={200}
-                        className={`${inputBase} border-gray-300 focus:border-black`}
-                    />
-                </div>
-
-                {/* ── City + Country ─────────────────────────────────── */}
-                <div className="grid grid-cols-2 gap-6">
-                    <div className="flex flex-col gap-1">
-                        <label className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
-                            City
-                        </label>
-                        <input
-                            type="text"
-                            name="city"
-                            value={form.city}
-                            onChange={handleChange}
-                            placeholder="Cairo"
-                            maxLength={100}
-                            className={`${inputBase} border-gray-300 focus:border-black`}
-                        />
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-400">
+                        <span className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                        <p className="text-xs uppercase tracking-wider">Loading Profile…</p>
                     </div>
-                    <div className="flex flex-col gap-1">
-                        <label className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
-                            Country
-                        </label>
-                        <input
-                            type="text"
-                            name="country"
-                            value={form.country}
-                            onChange={handleChange}
-                            placeholder="Egypt"
-                            maxLength={100}
-                            className={`${inputBase} border-gray-300 focus:border-black`}
-                        />
-                    </div>
-                </div>
+                ) : (
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+                        {/* ── Photo avatar ─────────────────────────────────── */}
+                        <div className="flex flex-col items-center gap-3">
+                            <div
+                                onClick={() => fileInputRef.current?.click()}
+                                className="relative w-24 h-24 rounded-full cursor-pointer group"
+                            >
+                                {/* Photo or initials */}
+                                {photoPreview ? (
+                                    <img
+                                        src={photoPreview}
+                                        alt="Profile"
+                                        className="w-24 h-24 rounded-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="w-24 h-24 rounded-full bg-black text-white flex items-center justify-center text-2xl font-semibold select-none">
+                                        {initials || "?"}
+                                    </div>
+                                )}
 
-                {/* ── Zip ────────────────────────────────────────────── */}
-                <div className="flex flex-col gap-1">
-                    <label className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
-                        Zip / Postal Code
-                    </label>
-                    <input
-                        type="text"
-                        name="zipCode"
-                        value={form.zipCode}
-                        onChange={handleChange}
-                        placeholder="11511"
-                        maxLength={10}
-                        className={`${inputBase} border-gray-300 focus:border-black`}
-                    />
-                </div>
+                                {/* Camera overlay on hover */}
+                                <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="w-7 h-7 text-white"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        strokeWidth={1.5}
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"
+                                        />
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z"
+                                        />
+                                    </svg>
+                                </div>
+                            </div>
 
-                {/* ── Save ───────────────────────────────────────────── */}
-                <div className="flex justify-end pt-2">
-                    <button
-                        type="submit"
-                        disabled={saving}
-                        className="bg-black text-white text-sm tracking-widest uppercase px-10 py-3 rounded-full
-                       hover:bg-stone-800 active:scale-95 transition-all duration-150
-                       disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                        {saving && (
-                            <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        )}
-                        {saving ? "Saving…" : "Save Profile"}
-                    </button>
-                </div>
+                            <p className="text-xs text-gray-400">
+                                Click photo to change &nbsp;·&nbsp; JPG, PNG, WEBP · max 5 MB
+                            </p>
 
-            </form>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                onChange={handlePhotoChange}
+                                className="hidden"
+                            />
+                        </div>
+
+                        {/* ── Email — locked ─────────────────────────────────── */}
+                        <div className="flex flex-col gap-1">
+                            <label className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
+                                Email Address
+                            </label>
+                            <input
+                                type="email"
+                                value={auth?.user?.email ?? ""}
+                                disabled
+                                className={`${inputBase} border-gray-200 text-gray-400 cursor-not-allowed`}
+                            />
+                        </div>
+
+                        {/* ── First Name ─────────────────────────────────────── */}
+                        <div className="flex flex-col gap-1">
+                            <label className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
+                                First Name
+                            </label>
+                            <input
+                                type="text"
+                                name="firstName"
+                                value={form.firstName}
+                                onChange={handleChange}
+                                required
+                                placeholder="Enter your first name"
+                                maxLength={50}
+                                className={`${inputBase} border-gray-300 focus:border-black`}
+                            />
+                        </div>
+
+                        {/* ── Last Name ──────────────────────────────────────── */}
+                        <div className="flex flex-col gap-1">
+                            <label className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
+                                Last Name
+                            </label>
+                            <input
+                                type="text"
+                                name="lastName"
+                                value={form.lastName}
+                                onChange={handleChange}
+                                required
+                                placeholder="Enter your last name"
+                                maxLength={50}
+                                className={`${inputBase} border-gray-300 focus:border-black`}
+                            />
+                        </div>
+
+                        {/* ── Phone ──────────────────────────────────────────── */}
+                        <div className="flex flex-col gap-1">
+                            <label className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
+                                Phone Number
+                            </label>
+                            <input
+                                type="tel"
+                                name="phoneNumber"
+                                value={form.phoneNumber}
+                                onChange={handleChange}
+                                placeholder="+20 10x xxxx xxxx"
+                                maxLength={16}
+                                className={`${inputBase} border-gray-300 focus:border-black`}
+                            />
+                        </div>
+
+                        <hr className="border-gray-100" />
+
+                        {/* ── Street ─────────────────────────────────────────── */}
+                        <div className="flex flex-col gap-1">
+                            <label className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
+                                Street Address
+                            </label>
+                            <input
+                                type="text"
+                                name="street"
+                                value={form.street}
+                                onChange={handleChange}
+                                placeholder="123 Nile Corniche St."
+                                maxLength={200}
+                                className={`${inputBase} border-gray-300 focus:border-black`}
+                            />
+                        </div>
+
+                        {/* ── City + Country ─────────────────────────────────── */}
+                        <div className="grid grid-cols-2 gap-6">
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
+                                    City
+                                </label>
+                                <input
+                                    type="text"
+                                    name="city"
+                                    value={form.city}
+                                    onChange={handleChange}
+                                    placeholder="Cairo"
+                                    maxLength={100}
+                                    className={`${inputBase} border-gray-300 focus:border-black`}
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
+                                    Country
+                                </label>
+                                <input
+                                    type="text"
+                                    name="country"
+                                    value={form.country}
+                                    onChange={handleChange}
+                                    placeholder="Egypt"
+                                    maxLength={100}
+                                    className={`${inputBase} border-gray-300 focus:border-black`}
+                                />
+                            </div>
+                        </div>
+
+                        {/* ── Zip ────────────────────────────────────────────── */}
+                        <div className="flex flex-col gap-1">
+                            <label className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
+                                Zip / Postal Code
+                            </label>
+                            <input
+                                type="text"
+                                name="zipCode"
+                                value={form.zipCode}
+                                onChange={handleChange}
+                                placeholder="11511"
+                                maxLength={10}
+                                className={`${inputBase} border-gray-300 focus:border-black`}
+                            />
+                        </div>
+
+                        {/* ── Save ───────────────────────────────────────────── */}
+                        <div className="flex justify-end pt-2">
+                            <button
+                                type="submit"
+                                disabled={saving}
+                                className="bg-black text-white text-sm tracking-widest uppercase px-10 py-3 rounded-full
+                               hover:bg-stone-800 active:scale-95 transition-all duration-150
+                               disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
+                            >
+                                {saving && (
+                                    <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                )}
+                                {saving ? "Saving…" : "Save Profile"}
+                            </button>
+                        </div>
+                    </form>
+                )}
             </div>
         </div>
     );

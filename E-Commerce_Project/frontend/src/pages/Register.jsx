@@ -89,7 +89,7 @@ function Register() {
 
               <div className="w-full p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 leading-relaxed">
                 <p className="font-semibold mb-1">Didn't find the email in your inbox?</p>
-                <p>Please check your <strong>Spam / Junk (الرسائل غير المرغوب فيها)</strong> folder, as automated emails can often land there during development.</p>
+                <p>Please check your <strong>Spam / Junk</strong> folder, as automated emails can often land there during development.</p>
               </div>
 
               <div className="w-full mt-2 flex flex-col gap-2.5">

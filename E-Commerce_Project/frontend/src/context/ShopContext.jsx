@@ -1,7 +1,8 @@
 import React, { useState, useEffect, createContext, useCallback } from "react";
-import { productApi } from "../services/productService";
+import { productApi, categoryApi } from "../services/productService";
 import { cartApi } from "../services/cartService";
 import { orderApi } from "../services/orderService";
+import { cacheService } from "../services/cacheService";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
@@ -22,12 +23,36 @@ const ORDER_PERMISSIONS = [
   "order:cancel",
 ];
 
+const PRODUCTS_CACHE_KEY = "products";
+const PRODUCTS_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const CATEGORIES_CACHE_KEY = "categories";
+const CATEGORIES_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
 function ShopContextProvider({ children }) {
   const currency = "$";
   const delivery_fee = 0;
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
-  const [products, setProducts] = useState([]);
+
+  // Initialize directly from cache for instant 0ms first render
+  const [products, setProducts] = useState(() => {
+    try {
+      const cached = cacheService.get(PRODUCTS_CACHE_KEY, PRODUCTS_TTL_MS * 2);
+      return Array.isArray(cached?.data) ? cached.data : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [categories, setCategories] = useState(() => {
+    try {
+      const cached = cacheService.get(CATEGORIES_CACHE_KEY, CATEGORIES_TTL_MS * 2);
+      return Array.isArray(cached?.data) ? cached.data : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [productsLoading, setProductsLoading] = useState(false);
   const [productsError, setProductsError] = useState(null);
   const [reservedStock, setReservedStock] = useState({});
@@ -37,10 +62,13 @@ function ShopContextProvider({ children }) {
   const fetchReservedStock = useCallback(async () => {
     try {
       const data = await orderApi.getReservedStock();
-      setReservedStock(typeof data === "object" && data !== null ? data : {});
+      const stockObj = typeof data === "object" && data !== null ? data : {};
+      setReservedStock(stockObj);
+      return stockObj;
     } catch (err) {
       console.warn("Could not fetch reserved stock:", err);
       setReservedStock({});
+      return {};
     }
   }, []);
 
@@ -86,11 +114,13 @@ function ShopContextProvider({ children }) {
       setCartLoading(true);
       const data = await cartApi.getCart();
       setCartData(data);
+      return data;
     } catch (err) {
       if (err?.response?.status !== 404) {
         console.error("Failed to load cart:", err);
       }
       setCartData({ items: [] });
+      return { items: [] };
     } finally {
       setCartLoading(false);
     }
@@ -98,7 +128,6 @@ function ShopContextProvider({ children }) {
 
   useEffect(() => {
     if (isLoggedIn() && auth?.role === "USER") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchCart();
     } else if (!isLoggedIn()) {
       setCartData(null);
@@ -171,7 +200,6 @@ function ShopContextProvider({ children }) {
       );
     } catch (err) {
       if (err?.response?.status === 404) {
-        // Item already gone on the server — just remove it from local state
         setCartData((prev) =>
           prev
             ? {
@@ -204,18 +232,63 @@ function ShopContextProvider({ children }) {
     );
   }, [cartData]);
 
-  // ── Products ──────────────────────────────────────────────────────────────
-  const refreshProducts = useCallback(async () => {
+  // ── Categories with Cache ────────────────────────────────────────────────
+  const refreshCategories = useCallback(async ({ force = false } = {}) => {
+    const cached = cacheService.get(CATEGORIES_CACHE_KEY, CATEGORIES_TTL_MS);
+    if (!force && cached && !cached.isExpired && Array.isArray(cached.data) && cached.data.length > 0) {
+      setCategories(cached.data);
+      return cached.data;
+    }
+
     try {
-      setProductsLoading(true);
+      const res = await categoryApi.getAll();
+      const list = res?.data?.data || res?.data || [];
+      if (Array.isArray(list) && list.length > 0) {
+        setCategories(list);
+        cacheService.set(CATEGORIES_CACHE_KEY, list);
+        return list;
+      }
+      return cached?.data || [];
+    } catch (err) {
+      console.warn("Could not load categories in background:", err);
+      return cached?.data || [];
+    }
+  }, []);
+
+  // ── Products with Cache & Stale-While-Revalidate ──────────────────────────
+  const refreshProducts = useCallback(async ({ force = false } = {}) => {
+    const cached = cacheService.get(PRODUCTS_CACHE_KEY, PRODUCTS_TTL_MS);
+
+    // If fresh cache exists and force is false, populate state immediately with 0ms network
+    if (!force && cached && !cached.isExpired && Array.isArray(cached.data) && cached.data.length > 0) {
+      setProducts(cached.data);
+      return cached.data;
+    }
+
+    try {
+      // Only show full loading if we do not already have products displayed
+      if (!cached?.data?.length && products.length === 0) {
+        setProductsLoading(true);
+      }
       setProductsError(null);
+
       const [data] = await Promise.all([
         productApi.getAll(),
         fetchReservedStock(),
+        refreshCategories({ force }),
       ]);
-      setProducts(Array.isArray(data) ? data : []);
-      return Array.isArray(data) ? data : [];
+
+      const list = Array.isArray(data) ? data : [];
+      setProducts(list);
+      cacheService.set(PRODUCTS_CACHE_KEY, list);
+      return list;
     } catch (err) {
+      if (cached?.data?.length > 0) {
+        console.warn("[ShopContext] Backend error; falling back to cached products:", err?.message);
+        setProducts(cached.data);
+        return cached.data;
+      }
+
       const msg =
         err?.response?.status === 401
           ? "Your session expired. Please log in again."
@@ -225,16 +298,14 @@ function ShopContextProvider({ children }) {
               err?.message ||
               "Could not load products.";
       setProductsError(msg);
-      setProducts([]);
       return [];
     } finally {
       setProductsLoading(false);
     }
-  }, []);
+  }, [fetchReservedStock, refreshCategories, products.length]);
 
   useEffect(() => {
     if (!isLoggedIn()) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setProducts([]);
       setProductsLoading(false);
       setProductsError(null);
@@ -249,11 +320,29 @@ function ShopContextProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth]);
 
-  const addProduct = (p) => setProducts((prev) => [p, ...prev]);
-  const updateProduct = (up) =>
-    setProducts((prev) => prev.map((p) => (p.id === up.id ? up : p)));
-  const deleteProduct = (id) =>
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+  const addProduct = (p) => {
+    setProducts((prev) => {
+      const next = [p, ...prev];
+      cacheService.set(PRODUCTS_CACHE_KEY, next);
+      return next;
+    });
+  };
+
+  const updateProduct = (up) => {
+    setProducts((prev) => {
+      const next = prev.map((p) => (p.id === up.id ? up : p));
+      cacheService.set(PRODUCTS_CACHE_KEY, next);
+      return next;
+    });
+  };
+
+  const deleteProduct = (id) => {
+    setProducts((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      cacheService.set(PRODUCTS_CACHE_KEY, next);
+      return next;
+    });
+  };
 
   const navigate = useNavigate();
 
@@ -266,6 +355,9 @@ function ShopContextProvider({ children }) {
     addProduct,
     updateProduct,
     deleteProduct,
+
+    categories,
+    refreshCategories,
 
     PRODUCT_PERMISSIONS,
     ORDER_PERMISSIONS,

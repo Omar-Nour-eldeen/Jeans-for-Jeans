@@ -9,24 +9,24 @@ import SearchBar from "../components/SearchBar";
 import { categoryApi } from "../services/productService";
 
 function Collection() {
-  const { products, search, showSearch } = useContext(ShopContext);
+  const { products, search, showSearch, categories: ctxCategories, refreshCategories } = useContext(ShopContext);
   // eslint-disable-next-line no-unused-vars
   const [showFilter, setShowFilter] = useState(false);
   const [filterProducts, setFilterProducts] = useState([]);
   const [category, setCategory] = useState([]);
   const [subCategory, setSubCategory] = useState([]);
   const [sortType, setSortType] = useState("relevance");
-  const [dbCategories, setDbCategories] = useState([]);
+  const [dbCategories, setDbCategories] = useState(ctxCategories || []);
 
   useEffect(() => {
-    categoryApi
-      .getAll()
-      .then((res) => {
-        const list = res?.data?.data || res?.data || [];
+    if (ctxCategories && ctxCategories.length > 0) {
+      setDbCategories(ctxCategories);
+    } else if (refreshCategories) {
+      refreshCategories().then((list) => {
         if (Array.isArray(list)) setDbCategories(list);
-      })
-      .catch(() => {});
-  }, []);
+      });
+    }
+  }, [ctxCategories, refreshCategories]);
 
   const mainCategories = useMemo(
     () => dbCategories.filter((c) => !c.parentId),

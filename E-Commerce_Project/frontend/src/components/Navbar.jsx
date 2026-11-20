@@ -3,19 +3,13 @@ import { assets } from "../assets/assets";
 import { Link, NavLink } from "react-router-dom";
 import { ShopContext } from "../context/ShopContext";
 import { useAuth } from "../context/AuthContext";
-import { getProfile } from "../services/userService";
+import { getProfile, getCachedProfile } from "../services/userService";
 
 function Navbar() {
   const { setShowSearch, getCartCount, navigate } = useContext(ShopContext);
   const { logout, auth } = useAuth();
   const [visible, setVisible] = useState(false);
-  const [profile, setProfile] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("user_profile") || "null");
-    } catch {
-      return null;
-    }
-  });
+  const [profile, setProfile] = useState(getCachedProfile);
 
   useEffect(() => {
     let isMounted = true;
@@ -24,7 +18,6 @@ function Navbar() {
         .then((data) => {
           if (isMounted && data) {
             setProfile(data);
-            localStorage.setItem("user_profile", JSON.stringify(data));
           }
         })
         .catch(() => {});

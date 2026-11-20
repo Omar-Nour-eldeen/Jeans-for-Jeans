@@ -7,6 +7,7 @@ import {
   useEffect,
 } from "react";
 import { useNavigate } from "react-router-dom";
+import { cacheService } from "../services/cacheService";
 import {
   login as loginApi,
   loginWithGoogle as loginWithGoogleApi,
@@ -101,10 +102,11 @@ export const AuthProvider = ({ children }) => {
         try {
           es.close();
         } catch (_) {}
+        cacheService.clearUserData();
         localStorage.removeItem("auth");
         setAuth(null);
         window.dispatchEvent(new CustomEvent("auth:updated", { detail: null }));
-        toast.error("تم حذف هذا الحساب بواسطة المشرف. تم تسجيل خروجك تلقائياً.");
+        toast.error("This account has been deleted by an administrator. You have been logged out.");
         setTimeout(() => {
           window.location.href = "/login";
         }, 1000);
@@ -138,11 +140,13 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const logout = useCallback(async () => {
+    cacheService.clearUserData();
     await logoutApi();
     setAuth(null);
   }, []);
 
   const logoutAll = useCallback(async () => {
+    cacheService.clearUserData();
     await logoutAllApi();
     setAuth(null);
   }, []);

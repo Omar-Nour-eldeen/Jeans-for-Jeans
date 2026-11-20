@@ -5,7 +5,8 @@ import Title from "../components/Title";
 import CartTotal from "../components/CartTotal";
 import { ShopContext } from "../context/ShopContext";
 import { orderApi } from "../services/orderService";
-import { getProfile } from "../services/userService";
+import { getProfile, getCachedProfile } from "../services/userService";
+import { cacheService } from "../services/cacheService";
 import { toast } from "react-toastify";
 
 // Backend expects: CASH_ON_DELIVERY
@@ -20,16 +21,24 @@ function PlaceOrder() {
   const { navigate, cartData, clearCart, products, refreshProducts, fetchCart, getReservedForVariant } =
     useContext(ShopContext);
 
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    street: "",
-    city: "",
-    state: "",
-    zipcode: "",
-    country: "",
-    phone: "",
+  const [formData, setFormData] = useState(() => {
+    const cached = getCachedProfile();
+    let auth = null;
+    try {
+      auth = JSON.parse(localStorage.getItem("auth") || "null");
+    } catch {}
+    const authEmail = auth?.user?.email || auth?.email || "";
+    return {
+      firstName: cached?.firstName || "",
+      lastName: cached?.lastName || "",
+      email: cached?.email && !cached.email.includes("@example.com") ? cached.email : authEmail,
+      street: cached?.street || "",
+      city: cached?.city || "",
+      state: cached?.city || "",
+      zipcode: cached?.zipCode || "",
+      country: cached?.country || "Egypt",
+      phone: cached?.phoneNumber || "",
+    };
   });
 
   useEffect(() => {
@@ -152,6 +161,9 @@ function PlaceOrder() {
       };
 
       await orderApi.placeOrder(body);
+
+      // Invalidate orders cache so /orders immediately loads fresh data
+      cacheService.remove("user_orders");
 
       // Clear cart locally (backend also clears it)
       await clearCart();
