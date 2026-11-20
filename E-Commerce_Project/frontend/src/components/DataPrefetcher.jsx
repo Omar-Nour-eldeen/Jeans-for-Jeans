@@ -11,31 +11,13 @@ import { ShopContext } from "../context/ShopContext";
  */
 export default function DataPrefetcher() {
   const { auth, isLoggedIn } = useAuth();
-  const {
-    refreshProducts,
-    refreshCategories,
-    fetchCart,
-    fetchReservedStock,
-  } = useContext(ShopContext) || {};
 
   useEffect(() => {
-    // 1. Immediately call Public Services on app startup
-    const timer = setTimeout(() => {
-      refreshProducts?.().catch(() => {});
-      refreshCategories?.().catch(() => {});
-      fetchReservedStock?.().catch(() => {});
-
-      // 2. Call User Services if authenticated
-      if (isLoggedIn?.()) {
-        getProfile().catch(() => {});
-        if (auth?.role === "USER") {
-          fetchCart?.().catch(() => {});
-        }
-      }
-    }, 50);
-
-    return () => clearTimeout(timer);
-  }, [auth]); // Runs on startup and on auth change
+    // Prefetch user profile in background if logged in
+    if (isLoggedIn?.()) {
+      getProfile().catch(() => {});
+    }
+  }, [auth]);
 
   return null;
 }

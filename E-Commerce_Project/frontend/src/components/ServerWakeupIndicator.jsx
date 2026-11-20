@@ -18,45 +18,7 @@ export default function ServerWakeupIndicator() {
   const isCheckingRef = useRef(false);
 
   useEffect(() => {
-    // Check Gateway health on initial mount
-    const checkServerHealth = async () => {
-      if (isCheckingRef.current) return;
-      isCheckingRef.current = true;
-
-      try {
-        const res = await axios.get(`${BASE_URL}/orders/reserved-stock`, {
-          timeout: 4000,
-          validateStatus: (s) => s < 500,
-        });
-        if (res.status < 500) {
-          if (isWarmingUp) {
-            setIsReady(true);
-            setTimeout(() => {
-              setIsWarmingUp(false);
-              setIsReady(false);
-              setSecondsElapsed(0);
-            }, 1800);
-          }
-        }
-      } catch (err) {
-        // Cold start detected (502, 503, or Network Error)
-        const isCold =
-          !err.response ||
-          err.response?.status === 502 ||
-          err.response?.status === 503 ||
-          err.response?.status === 504 ||
-          err.code === "ECONNABORTED";
-        if (isCold) {
-          setIsWarmingUp(true);
-        }
-      } finally {
-        isCheckingRef.current = false;
-      }
-    };
-
-    checkServerHealth();
-
-    // Listen to cold-start event if any request gets a 502/503
+    // Listen to cold-start event when an API request encounters 502/503
     const handleColdStartEvent = () => {
       setIsWarmingUp(true);
     };
@@ -66,20 +28,27 @@ export default function ServerWakeupIndicator() {
     return () => {
       window.removeEventListener("server:cold-start-detected", handleColdStartEvent);
     };
-  }, [isWarmingUp]);
+  }, []);
 
-  // When warming up, poll real health every 3 seconds and track real elapsed time
+  // When warming up, poll real health every 8 seconds (to respect Cloudflare rate limits)
   useEffect(() => {
     if (!isWarmingUp || isReady) return;
 
     const timer = setInterval(() => {
-      setSecondsElapsed((prev) => prev + 1);
+      setSecondsElapsed((prev) => {
+        if (prev >= 65) {
+          // Auto-dismiss after 65 seconds to avoid infinite polling
+          setIsWarmingUp(false);
+          return 0;
+        }
+        return prev + 1;
+      });
     }, 1000);
 
     const poller = setInterval(async () => {
       try {
         const res = await axios.get(`${BASE_URL}/orders/reserved-stock`, {
-          timeout: 4000,
+          timeout: 5000,
           validateStatus: (s) => s < 500,
         });
         if (res.status < 500) {
@@ -91,9 +60,9 @@ export default function ServerWakeupIndicator() {
           }, 2000);
         }
       } catch {
-        // Still warming up, continue polling
+        // Still warming up, continue polling gently
       }
-    }, 3000);
+    }, 8000); // 8s polling interval = only ~7 requests per minute max
 
     return () => {
       clearInterval(timer);

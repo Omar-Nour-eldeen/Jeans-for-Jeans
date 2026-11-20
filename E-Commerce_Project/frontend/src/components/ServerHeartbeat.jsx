@@ -35,16 +35,23 @@ const getContainerList = () => {
   return DEFAULT_CONTAINERS;
 };
 
+let lastWakeupTime = 0;
+const WAKEUP_THROTTLE_MS = 60000; // Limit wake-up bursts to at most once per 60 seconds
+
 /**
  * Sends a lightweight HTTP ping directly to each container's SnapDeploy public URL.
  * Using mode: 'no-cors' triggers SnapDeploy's ingress to wake up the sleeping container
  * without any CORS restrictions or blocking the browser.
+ * Throttled to respect SnapDeploy's Cloudflare rate limits (< 100 req/min).
  */
 export const wakeUpAllContainers = () => {
+  const now = Date.now();
+  if (now - lastWakeupTime < WAKEUP_THROTTLE_MS) return;
+  lastWakeupTime = now;
+
   const urls = getContainerList();
   urls.forEach((url) => {
     try {
-      fetch(`${url}/health`, { mode: "no-cors", cache: "no-store" }).catch(() => {});
       fetch(`${url}/`, { mode: "no-cors", cache: "no-store" }).catch(() => {});
     } catch {}
   });
@@ -55,13 +62,13 @@ wakeUpAllContainers();
 
 /**
  * Keeps the backend services awake as long as ANY user has the frontend open in their browser.
- * Pings every 3 minutes (180s) which is well before platforms like SnapDeploy sleep (usually 10-15m).
+ * Pings every 4 minutes (240s) which is well before platforms like SnapDeploy sleep (usually 15m).
  */
 const ServerHeartbeat = () => {
   const lastPingRef = useRef(Date.now());
 
   useEffect(() => {
-    const PING_INTERVAL_MS = 180000; // 3 minutes
+    const PING_INTERVAL_MS = 240000; // 4 minutes
 
     const sendHeartbeat = async () => {
       lastPingRef.current = Date.now();
@@ -73,17 +80,14 @@ const ServerHeartbeat = () => {
       try {
         await api.get("/orders/reserved-stock", {
           _skipRetry: true,
-          timeout: 10000,
+          timeout: 8000,
         });
       } catch {
         // Ignore heartbeat failures quietly
       }
     };
 
-    // Wake up all containers immediately on mount
-    sendHeartbeat();
-
-    // Periodic heartbeat every 3 minutes
+    // Periodic heartbeat every 4 minutes (avoid duplicate initial fire since module already fired)
     const interval = setInterval(sendHeartbeat, PING_INTERVAL_MS);
 
     // Ping immediately when user returns to tab if idle > 3 minutes

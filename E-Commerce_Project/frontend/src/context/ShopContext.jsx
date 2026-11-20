@@ -59,17 +59,29 @@ function ShopContextProvider({ children }) {
 
   const { auth, isLoggedIn, hasAnyPermission } = useAuth();
 
+  const inFlightReservedStockRef = useRef(null);
+  const inFlightCategoriesRef = useRef(null);
+  const inFlightProductsRef = useRef(null);
+
   const fetchReservedStock = useCallback(async () => {
-    try {
-      const data = await orderApi.getReservedStock();
-      const stockObj = typeof data === "object" && data !== null ? data : {};
-      setReservedStock(stockObj);
-      return stockObj;
-    } catch (err) {
-      console.warn("Could not fetch reserved stock:", err);
-      setReservedStock({});
-      return {};
-    }
+    if (inFlightReservedStockRef.current) return inFlightReservedStockRef.current;
+
+    inFlightReservedStockRef.current = (async () => {
+      try {
+        const data = await orderApi.getReservedStock();
+        const stockObj = typeof data === "object" && data !== null ? data : {};
+        setReservedStock(stockObj);
+        return stockObj;
+      } catch (err) {
+        console.warn("Could not fetch reserved stock:", err);
+        setReservedStock({});
+        return {};
+      } finally {
+        inFlightReservedStockRef.current = null;
+      }
+    })();
+
+    return inFlightReservedStockRef.current;
   }, []);
 
   const getReservedForVariant = useCallback((variantId) => {
@@ -236,72 +248,87 @@ function ShopContextProvider({ children }) {
 
   // ── Categories with Cache ────────────────────────────────────────────────
   const refreshCategories = useCallback(async () => {
-    const cached = cacheService.get(CATEGORIES_CACHE_KEY, CATEGORIES_TTL_MS);
-    if (cached?.data?.length > 0) {
-      setCategories(cached.data);
-    }
+    if (inFlightCategoriesRef.current) return inFlightCategoriesRef.current;
 
-    try {
-      const res = await categoryApi.getAll();
-      const list = res?.data?.data || res?.data || [];
-      if (Array.isArray(list) && list.length > 0) {
-        setCategories(list);
-        cacheService.set(CATEGORIES_CACHE_KEY, list);
-        return list;
+    inFlightCategoriesRef.current = (async () => {
+      const cached = cacheService.get(CATEGORIES_CACHE_KEY, CATEGORIES_TTL_MS);
+      if (cached?.data?.length > 0) {
+        setCategories(cached.data);
       }
-      return cached?.data || [];
-    } catch (err) {
-      console.warn("Could not load categories in background:", err);
-      return cached?.data || [];
-    }
+
+      try {
+        const res = await categoryApi.getAll();
+        const list = res?.data?.data || res?.data || [];
+        if (Array.isArray(list) && list.length > 0) {
+          setCategories(list);
+          cacheService.set(CATEGORIES_CACHE_KEY, list);
+          return list;
+        }
+        return cached?.data || [];
+      } catch (err) {
+        console.warn("Could not load categories in background:", err);
+        return cached?.data || [];
+      } finally {
+        inFlightCategoriesRef.current = null;
+      }
+    })();
+
+    return inFlightCategoriesRef.current;
   }, []);
 
   // ── Products with Cache & Stale-While-Revalidate ──────────────────────────
   const refreshProducts = useCallback(async () => {
-    const cached = cacheService.get(PRODUCTS_CACHE_KEY, PRODUCTS_TTL_MS);
+    if (inFlightProductsRef.current) return inFlightProductsRef.current;
 
-    // Instant initial display from cache
-    if (cached?.data?.length > 0 && products.length === 0) {
-      setProducts(cached.data);
-    }
+    inFlightProductsRef.current = (async () => {
+      const cached = cacheService.get(PRODUCTS_CACHE_KEY, PRODUCTS_TTL_MS);
 
-    try {
-      if (!cached?.data?.length && products.length === 0) {
-        setProductsLoading(true);
-      }
-      setProductsError(null);
-
-      // Always call the backend services to wake them up and get fresh data
-      const [data] = await Promise.all([
-        productApi.getAll(),
-        fetchReservedStock(),
-        refreshCategories(),
-      ]);
-
-      const list = Array.isArray(data) ? data : [];
-      setProducts(list);
-      cacheService.set(PRODUCTS_CACHE_KEY, list);
-      return list;
-    } catch (err) {
-      if (cached?.data?.length > 0) {
-        console.warn("[ShopContext] Backend error; falling back to cached products:", err?.message);
+      // Instant initial display from cache
+      if (cached?.data?.length > 0 && products.length === 0) {
         setProducts(cached.data);
-        return cached.data;
       }
 
-      const msg =
-        err?.response?.status === 401
-          ? "Your session expired. Please log in again."
-          : err?.response?.status === 403
-            ? "You don't have permission to view products."
-            : err?.response?.data?.message ||
-              err?.message ||
-              "Could not load products.";
-      setProductsError(msg);
-      return [];
-    } finally {
-      setProductsLoading(false);
-    }
+      try {
+        if (!cached?.data?.length && products.length === 0) {
+          setProductsLoading(true);
+        }
+        setProductsError(null);
+
+        // Always call the backend services to wake them up and get fresh data
+        const [data] = await Promise.all([
+          productApi.getAll(),
+          fetchReservedStock(),
+          refreshCategories(),
+        ]);
+
+        const list = Array.isArray(data) ? data : [];
+        setProducts(list);
+        cacheService.set(PRODUCTS_CACHE_KEY, list);
+        return list;
+      } catch (err) {
+        if (cached?.data?.length > 0) {
+          console.warn("[ShopContext] Backend error; falling back to cached products:", err?.message);
+          setProducts(cached.data);
+          return cached.data;
+        }
+
+        const msg =
+          err?.response?.status === 401
+            ? "Your session expired. Please log in again."
+            : err?.response?.status === 403
+              ? "You don't have permission to view products."
+              : err?.response?.data?.message ||
+                err?.message ||
+                "Could not load products.";
+        setProductsError(msg);
+        return [];
+      } finally {
+        setProductsLoading(false);
+        inFlightProductsRef.current = null;
+      }
+    })();
+
+    return inFlightProductsRef.current;
   }, [fetchReservedStock, refreshCategories, products.length]);
 
   useEffect(() => {

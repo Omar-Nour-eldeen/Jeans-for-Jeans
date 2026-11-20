@@ -45,7 +45,7 @@ api.interceptors.response.use(
       window.dispatchEvent(new CustomEvent("server:cold-start-detected"));
     }
 
-    const MAX_RETRIES = 8; // 8 retries * 3.5s = ~28s (gives the booting container time to respond!)
+    const MAX_RETRIES = 3;
 
     if (
       isColdStart &&
@@ -53,7 +53,8 @@ api.interceptors.response.use(
       (original._retryCount || 0) < MAX_RETRIES
     ) {
       original._retryCount = (original._retryCount || 0) + 1;
-      await new Promise((resolve) => setTimeout(resolve, 3500));
+      const backoffDelay = original._retryCount * 4000; // 4s, 8s, 12s backoff to avoid rate limits
+      await new Promise((resolve) => setTimeout(resolve, backoffDelay));
       return api(original);
     }
 
