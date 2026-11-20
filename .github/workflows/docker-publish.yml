@@ -1,14 +1,39 @@
-
 name: Build and Push Docker Images
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
-  build-and-push:
+  build-and-push-services:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - name: auth-service
+            context: ./E-Commerce_Project/auth-service
+            image: omarnoureldeen/auth-service:latest
+          - name: cart-service
+            context: ./E-Commerce_Project/cart-service
+            image: omarnoureldeen/cart-service:latest
+          - name: eureka-server
+            context: ./E-Commerce_Project/eureka-server
+            image: omarnoureldeen/eureka-server:latest
+          - name: gateway
+            context: ./E-Commerce_Project/gateway
+            image: omarnoureldeen/gateway:latest
+          - name: order-service
+            context: ./E-Commerce_Project/order-service
+            image: omarnoureldeen/order-service:latest
+          - name: product-service
+            context: ./E-Commerce_Project/product-service
+            image: omarnoureldeen/product-service:latest
+          - name: user-services
+            context: ./E-Commerce_Project/user-services
+            image: omarnoureldeen/user-services:latest
 
     steps:
       - name: Checkout Repository
@@ -23,54 +48,29 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and Push Auth Service
+      - name: Build and Push ${{ matrix.service.name }}
         uses: docker/build-push-action@v6
         with:
-          context: ./E-Commerce_Project/auth-service
+          context: ${{ matrix.service.context }}
           push: true
-          tags: omarnoureldeen/auth-service:latest
+          tags: ${{ matrix.service.image }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Build and Push Cart Service
-        uses: docker/build-push-action@v6
-        with:
-          context: ./E-Commerce_Project/cart-service
-          push: true
-          tags: omarnoureldeen/cart-service:latest
+  build-and-push-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - name: Build and Push Eureka Server
-        uses: docker/build-push-action@v6
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
-          context: ./E-Commerce_Project/eureka-server
-          push: true
-          tags: omarnoureldeen/eureka-server:latest
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and Push Gateway
-        uses: docker/build-push-action@v6
-        with:
-          context: ./E-Commerce_Project/gateway
-          push: true
-          tags: omarnoureldeen/gateway:latest
-
-      - name: Build and Push Order Service
-        uses: docker/build-push-action@v6
-        with:
-          context: ./E-Commerce_Project/order-service
-          push: true
-          tags: omarnoureldeen/order-service:latest
-
-      - name: Build and Push Product Service
-        uses: docker/build-push-action@v6
-        with:
-          context: ./E-Commerce_Project/product-service
-          push: true
-          tags: omarnoureldeen/product-service:latest
-
-      - name: Build and Push User Service
-        uses: docker/build-push-action@v6
-        with:
-          context: ./E-Commerce_Project/user-services
-          push: true
-          tags: omarnoureldeen/user-services:latest
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Build and Push Frontend
         uses: docker/build-push-action@v6
@@ -82,3 +82,5 @@ jobs:
             VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
             VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
             VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -2,7 +2,7 @@ FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /build
 COPY pom.xml .
 COPY src ./src
-RUN mvn -B -DskipTests -Dmaven.wagon.http.retryHandler.count=3 package
+RUN mvn -B -DskipTests -Dmaven.wagon.http.retryHandler.count=5 -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false package
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app
