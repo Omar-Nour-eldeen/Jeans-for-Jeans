@@ -149,11 +149,13 @@ function ShopContextProvider({ children }) {
       toast.success("Item added to cart");
     } catch (err) {
       fetchReservedStock();
-      toast.error(
-        err?.response?.data?.message ||
+      const is503 = err?.response?.status === 503 || err?.message?.includes("503");
+      const msg = is503
+        ? "Cart service is spinning up, please retry in a moment."
+        : err?.response?.data?.message ||
           err?.message ||
-          "Could not add item to cart",
-      );
+          "Could not add item to cart";
+      toast.error(msg);
     }
   }, [fetchReservedStock]);
 

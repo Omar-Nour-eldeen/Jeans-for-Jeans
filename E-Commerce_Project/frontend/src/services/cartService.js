@@ -10,13 +10,13 @@ export const cartApi = {
   /** GET /cart */
   getCart: () =>
     api
-      .get("/cart", { headers: { "User-Id": getUserId() } })
+      .get("/cart", { headers: { "User-Id": getUserId() }, _skipRetry: true })
       .then((r) => r.data.data),
 
   /** GET /cart/count */
   getCartCount: () =>
     api
-      .get("/cart/count", { headers: { "User-Id": getUserId() } })
+      .get("/cart/count", { headers: { "User-Id": getUserId() }, _skipRetry: true })
       .then((r) => r.data.data?.count ?? 0),
 
   /**

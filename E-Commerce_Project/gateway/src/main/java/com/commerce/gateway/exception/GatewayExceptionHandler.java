@@ -45,6 +45,15 @@ public class GatewayExceptionHandler implements ErrorWebExceptionHandler {
             message = rse.getReason() != null ? rse.getReason() : message;
         }
 
+        // Add CORS headers to all Gateway error responses so browser doesn't block them with CORS error
+        String origin = exchange.getRequest().getHeaders().getOrigin();
+        if (origin != null && !origin.isBlank()) {
+            response.getHeaders().set("Access-Control-Allow-Origin", origin);
+            response.getHeaders().set("Access-Control-Allow-Credentials", "true");
+            response.getHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
+            response.getHeaders().set("Access-Control-Allow-Headers", "*");
+        }
+
         response.setStatusCode(status);
         response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
 

@@ -82,7 +82,10 @@ export const orderApi = {
 
   getReservedStock: () => {
     const userId = getUserId();
-    const config = userId ? { headers: { "User-Id": userId } } : {};
+    const config = {
+      ...(userId ? { headers: { "User-Id": userId } } : {}),
+      _skipRetry: true,
+    };
     return api
       .get("/orders/reserved-stock", config)
       .then((r) => r.data?.data ?? r.data ?? {})

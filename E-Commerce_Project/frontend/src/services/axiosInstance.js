@@ -6,7 +6,7 @@ const BASE_URL = import.meta.env.PROD
 
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 60000, // 60s timeout to allow cold-starting containers to boot
+  timeout: 30000,
   headers: { "Content-Type": "application/json" },
 });
 
@@ -20,7 +20,6 @@ api.interceptors.request.use((config) => {
 
 let isRefreshing = false;
 let failedQueue = [];
-let isColdStartActive = false;
 
 const processQueue = (error, token = null) => {
   failedQueue.forEach((p) => (error ? p.reject(error) : p.resolve(token)));
@@ -28,64 +27,30 @@ const processQueue = (error, token = null) => {
 };
 
 api.interceptors.response.use(
-  (response) => {
-    // If a request succeeds after we showed the cold-start modal, dismiss it gracefully
-    if (isColdStartActive) {
-      isColdStartActive = false;
-      window.dispatchEvent(
-        new CustomEvent("server:cold-start", {
-          detail: { isWarmingUp: false, success: true },
-        })
-      );
-    }
-    return response;
-  },
+  (response) => response,
   async (error) => {
     const original = error.config;
     if (!original) return Promise.reject(error);
 
-    // ── 1. Cold Start / Server Sleep Detection & Auto-Retry ──
+    // ── 1. Isolated Auto-Retry for 502/503/504 Cold Starts (Max 2 quick retries) ──
     const isColdStart =
-      !error.response || // Network Error / container sleeping / connection dropped
-      error.code === "ECONNABORTED" || // Request Timeout
+      !error.response ||
+      error.code === "ECONNABORTED" ||
       error.response?.status === 502 ||
       error.response?.status === 503 ||
       error.response?.status === 504;
 
-    const MAX_RETRIES = 12; // 12 retries * 4s = ~48s (typical Spring Boot container wake-up time)
+    const MAX_RETRIES = 2;
 
     if (
       isColdStart &&
-      !original._skipColdStartNotification &&
-      (original._coldStartRetries || 0) < MAX_RETRIES
+      !original._skipRetry &&
+      (original._retryCount || 0) < MAX_RETRIES
     ) {
-      original._coldStartRetries = (original._coldStartRetries || 0) + 1;
-      isColdStartActive = true;
-
-      // Notify the UI to show the ServerWakeupModal
-      window.dispatchEvent(
-        new CustomEvent("server:cold-start", {
-          detail: {
-            isWarmingUp: true,
-            retries: original._coldStartRetries,
-            maxRetries: MAX_RETRIES,
-          },
-        })
-      );
-
-      // Wait 4 seconds between retry attempts
-      await new Promise((resolve) => setTimeout(resolve, 4000));
+      original._retryCount = (original._retryCount || 0) + 1;
+      // Quick 2s wait before retry (no UI block, completely non-intrusive)
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       return api(original);
-    }
-
-    // Dismiss modal if we hit maximum retries so the user isn't stuck forever
-    if (isColdStartActive && (original._coldStartRetries || 0) >= MAX_RETRIES) {
-      isColdStartActive = false;
-      window.dispatchEvent(
-        new CustomEvent("server:cold-start", {
-          detail: { isWarmingUp: false, success: false },
-        })
-      );
     }
 
     // ── 2. Auto-refresh token on 403 (permissions updated) ──
