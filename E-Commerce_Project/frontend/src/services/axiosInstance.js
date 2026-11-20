@@ -40,6 +40,11 @@ api.interceptors.response.use(
       error.response?.status === 503 ||
       error.response?.status === 504;
 
+    if (isColdStart && !original._skipRetry) {
+      // Notify non-blocking live indicator
+      window.dispatchEvent(new CustomEvent("server:cold-start-detected"));
+    }
+
     const MAX_RETRIES = 2;
 
     if (

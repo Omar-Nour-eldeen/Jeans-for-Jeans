@@ -21,6 +21,7 @@ import Profile from "./pages/Profile";
 import Unauthorized from "./pages/Unauthorized";
 import ServerHeartbeat from "./components/ServerHeartbeat";
 import DataPrefetcher from "./components/DataPrefetcher";
+import ServerWakeupIndicator from "./components/ServerWakeupIndicator";
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
       <ToastContainer position="top-right" autoClose={3000} />
       <ServerHeartbeat />
       <DataPrefetcher />
+      <ServerWakeupIndicator />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
