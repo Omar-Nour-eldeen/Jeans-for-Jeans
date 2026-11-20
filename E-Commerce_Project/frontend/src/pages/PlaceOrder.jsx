@@ -159,6 +159,12 @@ function PlaceOrder() {
           recipientName: `${formData.firstName} ${formData.lastName}`.trim(),
         },
         paymentMethod: PAYMENT_MAP[method] ?? "CASH_ON_DELIVERY",
+        items: items.map((i) => ({
+          productId: String(i.productId),
+          variantId: Number(i.variantId),
+          variantLabel: i.variantLabel || `Size: ${i.variantId}`,
+          quantity: parseInt(i.quantity, 10),
+        })),
       };
 
       // Ensure backend cart in order-service has the current items before placing order

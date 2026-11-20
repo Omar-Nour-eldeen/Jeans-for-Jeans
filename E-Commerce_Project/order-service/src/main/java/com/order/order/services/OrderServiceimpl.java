@@ -60,7 +60,42 @@ public class OrderServiceimpl implements OrderService {
 
                 Cart cart = cartRepository.findByUserId(userId)
                                 .filter(c -> !c.getItems().isEmpty())
-                                .orElseThrow(CartEmptyException::new);
+                                .orElse(null);
+
+                // If DB cart is empty, check if items were provided directly in the request (hybrid fallback)
+                if (cart == null && (request.getItems() == null || request.getItems().isEmpty())) {
+                        throw new CartEmptyException();
+                }
+
+                if (cart == null) {
+                        cart = cartRepository.save(Cart.builder().userId(userId).build());
+                }
+
+                // If cart has no items in DB but request provided items, populate cart items
+                if (cart.getItems().isEmpty() && request.getItems() != null && !request.getItems().isEmpty()) {
+                        for (com.order.order.DTOs.Request.OrderItemRequest reqItem : request.getItems()) {
+                                ProductServiceClient.ProductDetail detail = productClient
+                                                .getProductDetail(reqItem.getProductId());
+                                VariantResponseDTO variant = detail.getVariants().stream()
+                                                .filter(v -> v.getId().equals(reqItem.getVariantId()))
+                                                .findFirst()
+                                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                                "Variant not found: " + reqItem.getVariantId()));
+
+                                CartItem ci = CartItem.builder()
+                                                .cart(cart)
+                                                .productId(String.valueOf(detail.getId()))
+                                                .productName(detail.getName())
+                                                .imageUrl(detail.getImages().stream().findFirst().orElse(null))
+                                                .unitPrice(detail.getPrice())
+                                                .variantId(variant.getId())
+                                                .variantLabel("Size: " + variant.getSize())
+                                                .quantity(reqItem.getQuantity())
+                                                .build();
+                                cart.getItems().add(ci);
+                        }
+                        cart = cartRepository.save(cart);
+                }
 
                 List<VariantResponseDTO> liveVariants = new ArrayList<>();
 

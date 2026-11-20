@@ -39,10 +39,18 @@ const execute = async (method, path, data = null, config = {}) => {
 
   const callProxy = () => {
     const proxyUrl = `/api/order-proxy${path}`;
-    if (method === "get") return axios.get(proxyUrl, fullConfig);
-    if (method === "post") return axios.post(proxyUrl, data, fullConfig);
-    if (method === "put") return axios.put(proxyUrl, data, fullConfig);
-    if (method === "delete") return axios.delete(proxyUrl, fullConfig);
+    const auth = JSON.parse(localStorage.getItem("auth") || "null");
+    const authHeaders = auth?.accessToken
+      ? { Authorization: `Bearer ${auth.accessToken}` }
+      : {};
+    const proxyConfig = {
+      ...fullConfig,
+      headers: { ...fullConfig.headers, ...authHeaders },
+    };
+    if (method === "get") return axios.get(proxyUrl, proxyConfig);
+    if (method === "post") return axios.post(proxyUrl, data, proxyConfig);
+    if (method === "put") return axios.put(proxyUrl, data, proxyConfig);
+    if (method === "delete") return axios.delete(proxyUrl, proxyConfig);
   };
 
   // If we already know proxy is the working target, use it directly

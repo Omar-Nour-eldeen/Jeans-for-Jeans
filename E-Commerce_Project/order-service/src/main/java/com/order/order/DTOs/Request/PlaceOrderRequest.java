@@ -5,6 +5,7 @@ import com.order.order.ENUMs.PaymentMethod;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import java.util.List;
 
 @Data
 public class PlaceOrderRequest {
@@ -18,4 +19,6 @@ public class PlaceOrderRequest {
 
     private String notes;
     private String customerEmail;
+    private List<OrderItemRequest> items;
 }
+
